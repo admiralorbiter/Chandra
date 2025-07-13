@@ -15,9 +15,13 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
+        }
+        
+        .login-container {
             display: flex;
             align-items: center;
             justify-content: center;
+            min-height: calc(100vh - 76px); /* Account for navbar height */
         }
         
         .login-container {
@@ -27,6 +31,13 @@
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
             width: 100%;
             max-width: 400px;
+        }
+        
+        .login-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: calc(100vh - 76px); /* Account for navbar height */
         }
         
         .logo {
@@ -113,7 +124,9 @@
     </style>
 </head>
 <body>
-    <div class="login-container">
+    {% include 'navbar.html' %}
+    <div class="login-wrapper">
+        <div class="login-container">
         <div class="logo">
             <h1>Chandra Education</h1>
             <p>Interactive Learning Platform</p>
@@ -144,6 +157,7 @@
             <span>|</span>
             <a href="{{ url_for('main.index') }}">Back to Home</a>
         </div>
+    </div>
     </div>
 </body>
 </html> 
