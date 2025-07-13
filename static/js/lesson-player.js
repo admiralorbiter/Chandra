@@ -1,6 +1,24 @@
 /**
  * Chandra Lesson Player
  * Integrates webcam, gesture recognition, and WebSocket communication
+ *
+ * === USAGE INSTRUCTIONS ===
+ *
+ * - Click "Start Detection" and allow camera access if prompted.
+ * - Hold your hand up to the camera, palm facing forward.
+ * - The "Current Gesture" box shows the detected gesture (e.g., Open Hand, Fist, Point, etc.).
+ * - The large number below shows how many fingers are detected as extended (0 = fist, 5 = open hand, etc.).
+ * - Try different gestures (fist, open hand, point, victory, thumbs up) to complete the lesson.
+ * - The "Lesson Progress" bar increases as you show new gestures.
+ * - Click "Toggle Debug" to show/hide hand landmark overlays (green lines and red dots) for troubleshooting detection.
+ *
+ * === DEVELOPER NOTES ===
+ *
+ * - Finger counting is based on the detected gesture:
+ *   - Fist = 0, Point = 1, Victory = 2, Open Hand = 5, Thumbs Up = 1 (thumb only)
+ *   - If the gesture is not recognized, it will show as "Unknown" and 0 fingers.
+ * - Debug mode overlays hand landmarks and connections on the video feed (if implemented in GestureEngine.drawLandmarks).
+ * - Good lighting and a clear background improve detection accuracy.
  */
 
 class LessonPlayer {
@@ -13,6 +31,9 @@ class LessonPlayer {
         this.debugMode = false;
         this.gestureHistory = [];
         this.maxHistoryLength = 10;
+        this.runningTotal = 0;
+        this.lastFingerCount = null;
+        this.runningTotalSpan = document.getElementById('runningTotal');
         
         // DOM elements
         this.video = document.getElementById('video');
@@ -195,6 +216,7 @@ class LessonPlayer {
      */
     toggleDebugMode() {
         this.debugMode = !this.debugMode;
+        this.gestureEngine.debugMode = this.debugMode;
         this.debugBtn.classList.toggle('btn-outline-info', !this.debugMode);
         this.debugBtn.classList.toggle('btn-info', this.debugMode);
         console.log('Debug mode:', this.debugMode ? 'enabled' : 'disabled');
@@ -260,11 +282,19 @@ class LessonPlayer {
             'fist': 0,
             'point': 1,
             'victory': 2,
-            'open_hand': 5
+            'open_hand': 5,
+            'thumbs_up': 1
         };
         
         const count = fingerCounts[gestureName] || 0;
         this.fingerCount.textContent = count;
+        
+        // Add to running total only if the count changes from the previous detection
+        if (this.lastFingerCount !== null && count !== this.lastFingerCount) {
+            this.runningTotal += count;
+            this.runningTotalSpan.textContent = this.runningTotal;
+        }
+        this.lastFingerCount = count;
         
         // Add visual feedback
         this.fingerCount.style.transform = 'scale(1.2)';

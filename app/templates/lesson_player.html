@@ -126,6 +126,26 @@
 </head>
 <body>
     <div class="container-fluid">
+        <!-- Project Description -->
+        <div class="row mt-4 mb-2">
+            <div class="col-12">
+                <div class="alert alert-info" style="max-width: 900px; margin: 0 auto;">
+                    <h4 class="mb-2">About This Demo</h4>
+                    <p>
+                        <strong>Chandra - Finger Counting Demo</strong> lets you count the total number of fingers you show to your webcam in real time. Each time you change the number of fingers held up, that number is added to the running total below.
+                    </p>
+                    <ol>
+                        <li>Click <b>Start Detection</b> and allow camera access if prompted.</li>
+                        <li>Hold up any number of fingers (0-5) to the camera.</li>
+                        <li>Each time you change the number of fingers, that number is added to the <b>Total Fingers Counted</b> below.</li>
+                        <li>Try different numbers to see your total increase!</li>
+                    </ol>
+                    <p>
+                        <strong>Tip:</strong> Good lighting and a clear background help the model detect your hand more accurately.
+                    </p>
+                </div>
+            </div>
+        </div>
         <!-- Connection Status -->
         <div class="connection-status">
             <span class="status-indicator status-disconnected" id="connectionIndicator"></span>
@@ -190,8 +210,11 @@
                     
                     <!-- Finger Count Display -->
                     <div class="finger-count" id="fingerCount">0</div>
+                    <div class="running-total" style="font-size:2rem; color:#28a745; text-align:center; margin-bottom:10px;">
+                        <strong>Total Fingers Counted:</strong> <span id="runningTotal">0</span>
+                    </div>
                     <div class="instruction-text">
-                        Show your hand to the camera and count with your fingers!
+                        <strong>Instructions:</strong> Hold up 0-5 fingers to the camera. Each time you change the number of fingers, that number is added to the running total below.
                     </div>
                     
                     <!-- Lesson Status -->

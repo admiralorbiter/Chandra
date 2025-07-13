@@ -17,6 +17,7 @@ class GestureEngine {
         this.fps = 10; // Throttle to 10 Hz as per requirements
         this.lastFrameTime = 0;
         this.frameInterval = 1000 / this.fps;
+        this.debugMode = false;
         
         // Gesture definitions
         this.gestures = {
@@ -146,11 +147,18 @@ class GestureEngine {
             
             if (predictions.length > 0) {
                 const hand = predictions[0];
+                if (this.debugMode) {
+                    this.drawLandmarks(hand.landmarks);
+                } else if (this.ctx) {
+                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                }
                 const gesture = this.analyzeGesture(hand);
                 
                 if (gesture && gesture.confidence > this.confidenceThreshold) {
                     this.handleGestureDetected(gesture);
                 }
+            } else if (this.ctx) {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
             }
 
             // Continue detection loop
