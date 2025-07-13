@@ -18,7 +18,9 @@ socketio = SocketIO()
 def create_app(config_name=None):
     """Application factory pattern for Flask app creation."""
     
-    app = Flask(__name__)
+    import os
+    static_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static')
+    app = Flask(__name__, static_folder=static_folder)
     
     # Load configuration
     if config_name is None:
