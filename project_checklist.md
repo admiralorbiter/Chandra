@@ -1,22 +1,19 @@
-# Cassini‑Edu Interactive Education Engine — Development Checklist
+# Chandra Interactive Education Engine — Development Checklist
 
 > **How to use:** Check each item as you implement it.  
 > Nested boxes are subtasks—finish all before checking the parent item.
 
 ## 0 · Project Scaffold
-- [ ] **Initialize Repository**
-  - [ ] Create Git repo & `.gitignore`
-  - [ ] Add `README.md` with project vision
-- [ ] **Flask Skeleton**
-  - [ ] Create Flask app factory (`create_app`)
-  - [ ] Register blueprints: `auth`, `lessons`, `scripts`, `analytics`
-  - [ ] Add `.env` and config classes (Dev, Prod)
-- [ ] **Environment Setup**
-  - [ ] `pipenv` / `venv` with Python 3.12
-  - [ ] Basic `requirements.txt` (`flask`, `flask-socketio`, `sqlalchemy`, etc.)
-  - [ ] Pre‑commit hooks (black, flake8)
-
----
+- [x] **Initialize Repository**
+  - [x] Create Git repo & `.gitignore`
+  - [x] Add `README.md` with project vision
+- [x] **Flask Skeleton**
+  - [x] Create Flask app factory (`create_app`)
+  - [x] Register blueprints: `auth`, `lessons`, `scripts`, `analytics`
+  - [x] Add `.env` and config classes (Dev, Prod)
+- [x] **Environment Setup**
+  - [x] Basic `requirements.txt` (`flask`, `flask-socketio`, `sqlalchemy`, etc.)
+  - [x] Pre‑commit hooks (black, flake8)
 
 ## 1 · Gesture MVP
 - [ ] **Client‑side Models**
@@ -119,7 +116,7 @@
 - [ ] Message Bus (Pub/Sub) abstraction
 - [ ] DB URI config toggle (SQLite ↔ Postgres)
 
-## ✅ Additional Cassini-Edu Checklist Features
+## ✅ Additional Chandra-Edu Checklist Features
 
 ### 🔧 Developer Experience & Debugging
 - [ ] **Enhanced Logging & Debugging**
