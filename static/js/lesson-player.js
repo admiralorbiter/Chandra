@@ -231,8 +231,8 @@ class LessonPlayer {
         // Update UI
         this.updateGestureDisplay(gestureEvent);
         
-        // Update finger count
-        this.updateFingerCount(gestureEvent.name);
+        // Update finger count using gestureEvent.fingerCount
+        this.updateFingerCount(gestureEvent.name, gestureEvent.fingerCount);
         
         // Add to history
         this.addToHistory(gestureEvent);
@@ -277,24 +277,16 @@ class LessonPlayer {
     /**
      * Update finger count based on gesture
      */
-    updateFingerCount(gestureName) {
-        const fingerCounts = {
-            'fist': 0,
-            'point': 1,
-            'victory': 2,
-            'open_hand': 5,
-            'thumbs_up': 1
-        };
-        
-        const count = fingerCounts[gestureName] || 0;
-        this.fingerCount.textContent = count;
+    updateFingerCount(gestureName, fingerCount) {
+        // Use the provided fingerCount directly
+        this.fingerCount.textContent = fingerCount;
         
         // Add to running total only if the count changes from the previous detection
-        if (this.lastFingerCount !== null && count !== this.lastFingerCount) {
-            this.runningTotal += count;
+        if (this.lastFingerCount !== null && fingerCount !== this.lastFingerCount) {
+            this.runningTotal += fingerCount;
             this.runningTotalSpan.textContent = this.runningTotal;
         }
-        this.lastFingerCount = count;
+        this.lastFingerCount = fingerCount;
         
         // Add visual feedback
         this.fingerCount.style.transform = 'scale(1.2)';

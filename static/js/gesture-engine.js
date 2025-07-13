@@ -18,6 +18,7 @@ class GestureEngine {
         this.lastFrameTime = 0;
         this.frameInterval = 1000 / this.fps;
         this.debugMode = false;
+        this.lastFingerCount = 0; // Track last finger count for comparison
         
         // Gesture definitions
         this.gestures = {
@@ -174,26 +175,21 @@ class GestureEngine {
      */
     analyzeGesture(hand) {
         const landmarks = hand.landmarks;
-        const gesture = this.classifyGesture(landmarks);
-        
-        // Add to history for smoothing
-        this.gestureHistory.push(gesture);
-        if (this.gestureHistory.length > this.maxHistoryLength) {
-            this.gestureHistory.shift();
-        }
-        
-        // Return most common gesture in recent history
-        return this.getMostCommonGesture();
+        const fingers = this.getFingerStates(landmarks);
+        // Count extended fingers
+        const fingerCount = [fingers.thumb, fingers.index, fingers.middle, fingers.ring, fingers.pinky].filter(Boolean).length;
+        // Use gesture name for display, but always provide fingerCount
+        const gesture = this.classifyGesture(landmarks, fingers);
+        gesture.fingerCount = fingerCount;
+        return gesture;
     }
 
     /**
      * Classify gesture based on hand landmarks
      */
-    classifyGesture(landmarks) {
-        // Simple gesture classification based on finger positions
-        const fingers = this.getFingerStates(landmarks);
-        
-        // Define gesture patterns
+    classifyGesture(landmarks, fingers) {
+        // If fingers not provided, calculate
+        if (!fingers) fingers = this.getFingerStates(landmarks);
         if (fingers.thumb && fingers.index && fingers.middle && fingers.ring && fingers.pinky) {
             return { name: 'open_hand', confidence: 0.9 };
         } else if (!fingers.thumb && !fingers.index && !fingers.middle && !fingers.ring && !fingers.pinky) {
@@ -205,7 +201,6 @@ class GestureEngine {
         } else if (fingers.index && fingers.middle && !fingers.thumb && !fingers.ring && !fingers.pinky) {
             return { name: 'victory', confidence: 0.8 };
         }
-        
         return { name: 'unknown', confidence: 0.5 };
     }
 
@@ -276,18 +271,16 @@ class GestureEngine {
      * Handle detected gesture
      */
     handleGestureDetected(gesture) {
-        if (gesture.name !== this.lastGesture) {
-            this.lastGesture = gesture.name;
-            
+        // Always trigger on finger count change
+        if (gesture.fingerCount !== this.lastFingerCount) {
+            this.lastFingerCount = gesture.fingerCount;
             const gestureEvent = {
                 type: 'gesture',
                 name: gesture.name,
                 confidence: gesture.confidence,
+                fingerCount: gesture.fingerCount,
                 timestamp: Date.now()
             };
-            
-            console.log('Gesture detected:', gestureEvent);
-            
             if (this.onGestureDetected) {
                 this.onGestureDetected(gestureEvent);
             }
