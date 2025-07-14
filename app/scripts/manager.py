@@ -1,144 +1,144 @@
 """
-Chandra Script Manager
-Handles script file operations, hot reloading, and script discovery
+Chandra Lesson Manager v2
+Handles lesson file operations, hot reloading, and lesson discovery
 """
 
 import os
 import json
 import time
 import logging
+import importlib.util
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from .engine import ScriptMetadata, ScriptOrchestrator
+from .engine import LessonMetadata, LessonOrchestrator
 
-class ScriptFileHandler(FileSystemEventHandler):
-    """File system event handler for script hot reloading"""
+class LessonFileHandler(FileSystemEventHandler):
+    """File system event handler for lesson hot reloading"""
     
-    def __init__(self, script_manager):
-        self.script_manager = script_manager
+    def __init__(self, lesson_manager):
+        self.lesson_manager = lesson_manager
     
     def on_modified(self, event):
         if not event.is_directory and event.src_path.endswith('.py'):
-            script_path = Path(event.src_path)
-            script_id = script_path.stem
-            logging.info(f"Script file modified: {script_id}")
-            self.script_manager.reload_script(script_id)
+            lesson_path = Path(event.src_path)
+            lesson_id = lesson_path.stem
+            logging.info(f"Lesson file modified: {lesson_id}")
+            self.lesson_manager.reload_lesson(lesson_id)
     
     def on_created(self, event):
         if not event.is_directory and event.src_path.endswith('.py'):
-            script_path = Path(event.src_path)
-            script_id = script_path.stem
-            logging.info(f"New script file created: {script_id}")
-            self.script_manager.load_script_from_file(script_id)
+            lesson_path = Path(event.src_path)
+            lesson_id = lesson_path.stem
+            logging.info(f"New lesson file created: {lesson_id}")
+            self.lesson_manager.load_lesson_from_file(lesson_id)
     
     def on_deleted(self, event):
         if not event.is_directory and event.src_path.endswith('.py'):
-            script_path = Path(event.src_path)
-            script_id = script_path.stem
-            logging.info(f"Script file deleted: {script_id}")
-            self.script_manager.unload_script(script_id)
+            lesson_path = Path(event.src_path)
+            lesson_id = lesson_path.stem
+            logging.info(f"Lesson file deleted: {lesson_id}")
+            self.lesson_manager.unload_lesson(lesson_id)
 
-class ScriptManager:
-    """Manages script files, metadata, and hot reloading"""
+class LessonManager:
+    """Manages lesson files, metadata, and hot reloading"""
     
-    def __init__(self, scripts_dir: str = "scripts"):
-        self.scripts_dir = Path(scripts_dir)
-        self.orchestrator = ScriptOrchestrator()
-        self.script_files: Dict[str, Path] = {}
-        self.script_metadata: Dict[str, ScriptMetadata] = {}
+    def __init__(self, lessons_dir: str = "lessons"):
+        self.lessons_dir = Path(lessons_dir)
+        self.orchestrator = LessonOrchestrator()
+        self.lesson_files: Dict[str, Path] = {}
+        self.lesson_metadata: Dict[str, LessonMetadata] = {}
         self.file_observer = None
         self.last_reload = {}
         
-        # Ensure scripts directory exists
-        self.scripts_dir.mkdir(exist_ok=True)
+        # Ensure lessons directory exists
+        self.lessons_dir.mkdir(exist_ok=True)
         
         # Initialize file watcher
         self._setup_file_watcher()
         
-        # Load existing scripts
-        self._discover_scripts()
+        # Load existing lessons
+        self._discover_lessons()
     
     def _setup_file_watcher(self):
         """Set up file system watcher for hot reloading"""
         try:
             self.file_observer = Observer()
-            event_handler = ScriptFileHandler(self)
-            self.file_observer.schedule(event_handler, str(self.scripts_dir), recursive=False)
+            event_handler = LessonFileHandler(self)
+            self.file_observer.schedule(event_handler, str(self.lessons_dir), recursive=False)
             self.file_observer.start()
             logging.info("File watcher started for hot reloading")
         except Exception as e:
             logging.error(f"Failed to start file watcher: {e}")
     
-    def _discover_scripts(self):
-        """Discover and load all scripts in the scripts directory"""
-        for script_file in self.scripts_dir.glob("*.py"):
-            if script_file.name.startswith('_'):
+    def _discover_lessons(self):
+        """Discover and load all lessons in the lessons directory"""
+        for lesson_file in self.lessons_dir.glob("*.py"):
+            if lesson_file.name.startswith('_'):
                 continue  # Skip private files
             
-            script_id = script_file.stem
-            self.load_script_from_file(script_id)
+            lesson_id = lesson_file.stem
+            self.load_lesson_from_file(lesson_id)
     
-    def load_script_from_file(self, script_id: str) -> bool:
-        """Load a script from file"""
-        script_file = self.scripts_dir / f"{script_id}.py"
-        metadata_file = self.scripts_dir / f"{script_id}.json"
+    def load_lesson_from_file(self, lesson_id: str) -> bool:
+        """Load a lesson from file"""
+        lesson_file = self.lessons_dir / f"{lesson_id}.py"
+        metadata_file = self.lessons_dir / f"{lesson_id}.json"
         
-        if not script_file.exists():
-            logging.error(f"Script file not found: {script_file}")
+        if not lesson_file.exists():
+            logging.error(f"Lesson file not found: {lesson_file}")
             return False
         
         try:
-            # Read script code
-            with open(script_file, 'r', encoding='utf-8') as f:
-                script_code = f.read()
+            # Read lesson code
+            with open(lesson_file, 'r', encoding='utf-8') as f:
+                lesson_code = f.read()
             
             # Read or create metadata
-            metadata = self._load_or_create_metadata(script_id, metadata_file)
+            metadata = self._load_or_create_metadata(lesson_id, metadata_file)
             
             # Store file reference
-            self.script_files[script_id] = script_file
-            self.script_metadata[script_id] = metadata
+            self.lesson_files[lesson_id] = lesson_file
+            self.lesson_metadata[lesson_id] = metadata
             
             # Load into orchestrator
-            success = self.orchestrator.load_script(script_id, script_code, metadata)
+            success = self.orchestrator.load_lesson(lesson_id, lesson_code, metadata)
             
             if success:
-                logging.info(f"Loaded script: {script_id}")
+                logging.info(f"Loaded lesson: {lesson_id}")
             else:
-                logging.error(f"Failed to load script: {script_id}")
+                logging.error(f"Failed to load lesson: {lesson_id}")
             
             return success
             
         except Exception as e:
-            logging.error(f"Error loading script {script_id}: {e}")
+            logging.error(f"Error loading lesson {lesson_id}: {e}")
             return False
     
-    def _load_or_create_metadata(self, script_id: str, metadata_file: Path) -> ScriptMetadata:
+    def _load_or_create_metadata(self, lesson_id: str, metadata_file: Path) -> LessonMetadata:
         """Load existing metadata or create new metadata"""
         if metadata_file.exists():
             try:
                 with open(metadata_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
-                    return ScriptMetadata(**data)
+                    return LessonMetadata(**data)
             except Exception as e:
-                logging.warning(f"Failed to load metadata for {script_id}: {e}")
+                logging.warning(f"Failed to load metadata for {lesson_id}: {e}")
         
         # Create new metadata
-        metadata = ScriptMetadata(
-            id=script_id,
-            name=script_id.replace('_', ' ').title(),
-            description=f"Script {script_id}",
+        metadata = LessonMetadata(
+            id=lesson_id,
+            name=lesson_id.replace('_', ' ').title(),
+            description=f"Lesson {lesson_id}",
             author="system",
             version="1.0.0",
             created=time.strftime("%Y-%m-%d"),
-            hooks={
-                'on_start': False,
-                'on_gesture': False,
-                'on_tick': False
-            },
-            requirements=[]
+            tags=["interactive", "education"],
+            difficulty="beginner",
+            duration=10,
+            requirements=[],
+            dependencies=[]
         )
         
         # Save metadata
@@ -146,86 +146,86 @@ class ScriptManager:
             with open(metadata_file, 'w', encoding='utf-8') as f:
                 json.dump(metadata.__dict__, f, indent=2)
         except Exception as e:
-            logging.warning(f"Failed to save metadata for {script_id}: {e}")
+            logging.warning(f"Failed to save metadata for {lesson_id}: {e}")
         
         return metadata
     
-    def reload_script(self, script_id: str) -> bool:
-        """Reload a script from file"""
+    def reload_lesson(self, lesson_id: str) -> bool:
+        """Reload a lesson from file"""
         # Prevent rapid reloading
         current_time = time.time()
-        if script_id in self.last_reload:
-            if current_time - self.last_reload[script_id] < 1.0:  # 1 second cooldown
+        if lesson_id in self.last_reload:
+            if current_time - self.last_reload[lesson_id] < 1.0:  # 1 second cooldown
                 return True
         
-        self.last_reload[script_id] = current_time
+        self.last_reload[lesson_id] = current_time
         
-        # Stop the script if it's running
-        self.orchestrator.stop_script(script_id)
+        # Stop the lesson if it's running
+        self.orchestrator.stop_lesson(lesson_id)
         
         # Reload from file
-        success = self.load_script_from_file(script_id)
+        success = self.load_lesson_from_file(lesson_id)
         
         if success:
-            logging.info(f"Reloaded script: {script_id}")
+            logging.info(f"Reloaded lesson: {lesson_id}")
         else:
-            logging.error(f"Failed to reload script: {script_id}")
+            logging.error(f"Failed to reload lesson: {lesson_id}")
         
         return success
     
-    def unload_script(self, script_id: str):
-        """Unload a script"""
-        # Stop the script if it's running
-        self.orchestrator.stop_script(script_id)
+    def unload_lesson(self, lesson_id: str):
+        """Unload a lesson"""
+        # Stop the lesson if it's running
+        self.orchestrator.stop_lesson(lesson_id)
         
         # Remove from tracking
-        self.script_files.pop(script_id, None)
-        self.script_metadata.pop(script_id, None)
+        self.lesson_files.pop(lesson_id, None)
+        self.lesson_metadata.pop(lesson_id, None)
         
-        logging.info(f"Unloaded script: {script_id}")
+        logging.info(f"Unloaded lesson: {lesson_id}")
     
-    def create_script(self, script_id: str, template: str = "basic") -> bool:
-        """Create a new script with a template"""
-        script_file = self.scripts_dir / f"{script_id}.py"
+    def create_lesson(self, lesson_id: str, template: str = "basic") -> bool:
+        """Create a new lesson with a template"""
+        lesson_file = self.lessons_dir / f"{lesson_id}.py"
         
-        if script_file.exists():
-            logging.error(f"Script {script_id} already exists")
+        if lesson_file.exists():
+            logging.error(f"Lesson {lesson_id} already exists")
             return False
         
         try:
-            # Create script content based on template
-            script_content = self._get_script_template(template, script_id)
+            # Create lesson content based on template
+            lesson_content = self._get_lesson_template(template, lesson_id)
             
-            # Write script file
-            with open(script_file, 'w', encoding='utf-8') as f:
-                f.write(script_content)
+            # Write lesson file
+            with open(lesson_file, 'w', encoding='utf-8') as f:
+                f.write(lesson_content)
             
-            # Load the new script
-            success = self.load_script_from_file(script_id)
+            # Load the new lesson
+            success = self.load_lesson_from_file(lesson_id)
             
             if success:
-                logging.info(f"Created new script: {script_id}")
+                logging.info(f"Created new lesson: {lesson_id}")
             else:
                 # Clean up if loading failed
-                script_file.unlink(missing_ok=True)
-                logging.error(f"Failed to create script: {script_id}")
+                lesson_file.unlink(missing_ok=True)
+                logging.error(f"Failed to create lesson: {lesson_id}")
             
             return success
             
         except Exception as e:
-            logging.error(f"Error creating script {script_id}: {e}")
+            logging.error(f"Error creating lesson {lesson_id}: {e}")
             return False
     
-    def _get_script_template(self, template: str, script_id: str) -> str:
-        """Get script template content"""
+    def _get_lesson_template(self, template: str, lesson_id: str) -> str:
+        """Get lesson template content"""
         if template == "counting_fingers":
             return f'''"""
-{script_id} - Finger Counting Lesson
+{lesson_id} - Finger Counting Lesson
 A simple lesson that counts fingers and tracks progress
 """
 
 # Lesson configuration
-LESSON_NAME = "{script_id.replace('_', ' ').title()}"
+LESSON_NAME = "{lesson_id.replace('_', ' ').title()}"
 TARGET_GESTURES = ["fist", "open_hand", "point", "victory", "thumbs_up"]
 PROGRESS_PER_GESTURE = 20.0  # 20% per gesture
 
@@ -248,13 +248,15 @@ def lesson_start():
     lesson_progress = 0.0
     
     # Update lesson state
-    set_state("lesson_name", LESSON_NAME)
-    set_state("target_gestures", TARGET_GESTURES)
-    set_state("total_fingers", total_fingers)
-    set_state("gestures_seen", list(gestures_seen))
-    set_state("lesson_progress", lesson_progress)
+    state.update({{
+        "lesson_name": LESSON_NAME,
+        "target_gestures": TARGET_GESTURES,
+        "total_fingers": total_fingers,
+        "gestures_seen": list(gestures_seen),
+        "lesson_progress": lesson_progress
+    }})
     
-    emit_event("lesson_started", {{
+    emit("lesson_started", {{
         "lesson_name": LESSON_NAME,
         "target_gestures": TARGET_GESTURES
     }})
@@ -285,21 +287,23 @@ def handle_gesture(gesture_data):
         # Check if lesson is complete
         if lesson_progress >= 100.0:
             log("INFO", "Lesson completed!")
-            emit_event("lesson_completed", {{
+            emit("lesson_completed", {{
                 "total_fingers": total_fingers,
                 "gestures_seen": list(gestures_seen),
                 "final_progress": lesson_progress
             }})
     
     # Update state
-    set_state("total_fingers", total_fingers)
-    set_state("gestures_seen", list(gestures_seen))
-    set_state("lesson_progress", lesson_progress)
-    set_state("current_gesture", gesture)
-    set_state("current_finger_count", finger_count)
+    state.update({{
+        "total_fingers": total_fingers,
+        "gestures_seen": list(gestures_seen),
+        "lesson_progress": lesson_progress,
+        "current_gesture": gesture,
+        "current_finger_count": finger_count
+    }})
     
     # Emit gesture event
-    emit_event("gesture_processed", {{
+    emit("gesture_processed", {{
         "gesture": gesture,
         "finger_count": finger_count,
         "total_fingers": total_fingers,
@@ -310,116 +314,137 @@ def handle_gesture(gesture_data):
 def lesson_tick():
     """Called periodically during the lesson"""
     # Update lesson duration
-    start_time = get_state("start_time")
+    start_time = state.get("_started")
     if start_time:
         duration = time.time() - start_time
-        set_state("lesson_duration", duration)
+        state.set("lesson_duration", duration)
     
     # Emit periodic update
-    emit_event("lesson_tick", {{
-        "total_fingers": get_state("total_fingers"),
-        "progress": get_state("lesson_progress"),
-        "gestures_seen": get_state("gestures_seen")
+    emit("lesson_tick", {{
+        "total_fingers": state.get("total_fingers"),
+        "progress": state.get("lesson_progress"),
+        "gestures_seen": state.get("gestures_seen")
     }})
 '''
-        elif template == "letter_tracing":
+        
+        elif template == "data_analysis":
             return f'''"""
-{script_id} - Letter Tracing Lesson
-A lesson for practicing letter writing with hand gestures
+{lesson_id} - Data Analysis Lesson
+A lesson that uses Python data science tools
 """
 
+# Import data science libraries
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
 # Lesson configuration
-LESSON_NAME = "{script_id.replace('_', ' ').title()}"
-LETTERS = ["A", "B", "C", "D", "E"]
-CURRENT_LETTER_INDEX = 0
+LESSON_NAME = "{lesson_id.replace('_', ' ').title()}"
+DATA_POINTS = 100
+
+# Generate sample data
+data = np.random.normal(0, 1, DATA_POINTS)
+df = pd.DataFrame({{
+    'values': data,
+    'squared': data ** 2,
+    'cubed': data ** 3
+}})
 
 @on_start
 def lesson_start():
     """Called when the lesson starts"""
-    global CURRENT_LETTER_INDEX
+    log("INFO", f"Starting data analysis lesson: {{LESSON_NAME}}")
     
-    log("INFO", f"Starting letter tracing lesson")
-    log("INFO", f"Letters to trace: {{LETTERS}}")
-    
-    CURRENT_LETTER_INDEX = 0
-    
-    set_state("lesson_name", LESSON_NAME)
-    set_state("letters", LETTERS)
-    set_state("current_letter_index", CURRENT_LETTER_INDEX)
-    set_state("current_letter", LETTERS[CURRENT_LETTER_INDEX])
-    set_state("lesson_progress", 0.0)
-    
-    emit_event("lesson_started", {{
+    # Store data in state
+    state.update({{
         "lesson_name": LESSON_NAME,
-        "letters": LETTERS,
-        "current_letter": LETTERS[CURRENT_LETTER_INDEX]
+        "data_points": DATA_POINTS,
+        "mean": float(df['values'].mean()),
+        "std": float(df['values'].std()),
+        "min": float(df['values'].min()),
+        "max": float(df['values'].max())
+    }})
+    
+    emit("lesson_started", {{
+        "lesson_name": LESSON_NAME,
+        "data_points": DATA_POINTS,
+        "statistics": {{
+            "mean": state.get("mean"),
+            "std": state.get("std"),
+            "min": state.get("min"),
+            "max": state.get("max")
+        }}
     }})
 
 @on_gesture
 def handle_gesture(gesture_data):
     """Called when a gesture is detected"""
-    global CURRENT_LETTER_INDEX
-    
     gesture = gesture_data.get("gesture")
     
     if not gesture:
         return
     
-    current_letter = LETTERS[CURRENT_LETTER_INDEX]
+    log("INFO", f"Processing gesture: {{gesture}}")
     
-    # Check if gesture matches letter tracing pattern
-    if gesture == "point" and current_letter in ["A", "I", "L"]:
-        # Letter completed
-        CURRENT_LETTER_INDEX += 1
-        progress = (CURRENT_LETTER_INDEX / len(LETTERS)) * 100.0
+    # Different gestures trigger different analyses
+    if gesture == "fist":
+        # Calculate percentiles
+        percentiles = [25, 50, 75]
+        values = [float(df['values'].quantile(p/100)) for p in percentiles]
+        state.update({{"percentiles": values}})
         
-        log("INFO", f"Completed letter {{current_letter}}! Progress: {{progress:.1f}}%")
+        emit("analysis_complete", {{
+            "type": "percentiles",
+            "values": values
+        }})
+    
+    elif gesture == "open_hand":
+        # Calculate correlation
+        corr = float(df['values'].corr(df['squared']))
+        state.set("correlation", corr)
         
-        if CURRENT_LETTER_INDEX >= len(LETTERS):
-            log("INFO", "All letters completed!")
-            emit_event("lesson_completed", {{
-                "letters_completed": len(LETTERS),
-                "final_progress": 100.0
-            }})
-        else:
-            next_letter = LETTERS[CURRENT_LETTER_INDEX]
-            set_state("current_letter", next_letter)
-            set_state("current_letter_index", CURRENT_LETTER_INDEX)
-            set_state("lesson_progress", progress)
-            
-            emit_event("letter_completed", {{
-                "completed_letter": current_letter,
-                "next_letter": next_letter,
-                "progress": progress
-            }})
+        emit("analysis_complete", {{
+            "type": "correlation",
+            "value": corr
+        }})
     
-    # Update state
-    set_state("current_gesture", gesture)
-    set_state("lesson_progress", (CURRENT_LETTER_INDEX / len(LETTERS)) * 100.0)
-    
-    emit_event("gesture_processed", {{
-        "gesture": gesture,
-        "current_letter": current_letter,
-        "progress": (CURRENT_LETTER_INDEX / len(LETTERS)) * 100.0
-    }})
+    elif gesture == "point":
+        # Generate histogram data
+        hist, bins = np.histogram(df['values'], bins=10)
+        state.update({{
+            "histogram": hist.tolist(),
+            "bins": bins.tolist()
+        }})
+        
+        emit("analysis_complete", {{
+            "type": "histogram",
+            "histogram": hist.tolist(),
+            "bins": bins.tolist()
+        }})
 
 @on_tick
 def lesson_tick():
     """Called periodically during the lesson"""
-    # Update lesson duration
-    start_time = get_state("start_time")
-    if start_time:
-        duration = time.time() - start_time
-        set_state("lesson_duration", duration)
+    # Update progress based on analyses performed
+    analyses = state.get("analyses_performed", 0)
+    progress = min(100.0, analyses * 33.33)  # 3 analyses = 100%
+    
+    state.set("lesson_progress", progress)
+    
+    emit("lesson_tick", {{
+        "progress": progress,
+        "analyses_performed": analyses
+    }})
 '''
+        
         else:  # basic template
             return f'''"""
-{script_id} - Basic Lesson Template
+{lesson_id} - Basic Lesson Template
 A basic template for creating interactive lessons
 """
 
 # Lesson configuration
-LESSON_NAME = "{script_id.replace('_', ' ').title()}"
+LESSON_NAME = "{lesson_id.replace('_', ' ').title()}"
 TARGET_GESTURES = ["fist", "open_hand", "point"]
 
 # Lesson state
@@ -438,11 +463,13 @@ def lesson_start():
     lesson_progress = 0.0
     
     # Update lesson state
-    set_state("lesson_name", LESSON_NAME)
-    set_state("gesture_count", gesture_count)
-    set_state("lesson_progress", lesson_progress)
+    state.update({{
+        "lesson_name": LESSON_NAME,
+        "gesture_count": gesture_count,
+        "lesson_progress": lesson_progress
+    }})
     
-    emit_event("lesson_started", {{
+    emit("lesson_started", {{
         "lesson_name": LESSON_NAME
     }})
 
@@ -466,13 +493,15 @@ def handle_gesture(gesture_data):
     lesson_progress = min(100.0, gesture_count * 10.0)
     
     # Update state
-    set_state("gesture_count", gesture_count)
-    set_state("lesson_progress", lesson_progress)
-    set_state("current_gesture", gesture)
-    set_state("current_finger_count", finger_count)
+    state.update({{
+        "gesture_count": gesture_count,
+        "lesson_progress": lesson_progress,
+        "current_gesture": gesture,
+        "current_finger_count": finger_count
+    }})
     
     # Emit gesture event
-    emit_event("gesture_processed", {{
+    emit("gesture_processed", {{
         "gesture": gesture,
         "finger_count": finger_count,
         "gesture_count": gesture_count,
@@ -482,102 +511,103 @@ def handle_gesture(gesture_data):
     # Check if lesson is complete
     if lesson_progress >= 100.0:
         log("INFO", "Lesson completed!")
-        emit_event("lesson_completed", {{
-            "final_gesture_count": gesture_count,
-            "final_progress": lesson_progress
+        emit("lesson_completed", {{
+            "final_progress": lesson_progress,
+            "total_gestures": gesture_count
         }})
 
 @on_tick
 def lesson_tick():
     """Called periodically during the lesson"""
     # Update lesson duration
-    start_time = get_state("start_time")
+    start_time = state.get("_started")
     if start_time:
         duration = time.time() - start_time
-        set_state("lesson_duration", duration)
+        state.set("lesson_duration", duration)
     
     # Emit periodic update
-    emit_event("lesson_tick", {{
-        "gesture_count": get_state("gesture_count"),
-        "progress": get_state("lesson_progress")
+    emit("lesson_tick", {{
+        "gesture_count": state.get("gesture_count"),
+        "progress": state.get("lesson_progress")
     }})
 '''
     
-    def get_script_list(self) -> List[Dict[str, any]]:
-        """Get list of all available scripts"""
-        scripts = []
-        
-        for script_id, metadata in self.script_metadata.items():
-            script_info = {
-                'id': script_id,
+    def get_lesson_list(self) -> List[Dict[str, Any]]:
+        """Get list of all available lessons"""
+        lessons = []
+        for lesson_id, metadata in self.lesson_metadata.items():
+            lesson_info = {
+                'id': lesson_id,
                 'name': metadata.name,
                 'description': metadata.description,
                 'author': metadata.author,
                 'version': metadata.version,
                 'created': metadata.created,
-                'hooks': metadata.hooks,
-                'file_exists': script_id in self.script_files
+                'tags': metadata.tags,
+                'difficulty': metadata.difficulty,
+                'duration': metadata.duration,
+                'requirements': metadata.requirements,
+                'dependencies': metadata.dependencies
             }
-            scripts.append(script_info)
-        
-        return scripts
+            lessons.append(lesson_info)
+        return lessons
     
-    def get_script_content(self, script_id: str) -> Optional[str]:
-        """Get the content of a script"""
-        if script_id not in self.script_files:
+    def get_lesson_content(self, lesson_id: str) -> Optional[str]:
+        """Get the content of a lesson"""
+        if lesson_id not in self.lesson_files:
             return None
         
         try:
-            with open(self.script_files[script_id], 'r', encoding='utf-8') as f:
+            with open(self.lesson_files[lesson_id], 'r', encoding='utf-8') as f:
                 return f.read()
         except Exception as e:
-            logging.error(f"Error reading script {script_id}: {e}")
+            logging.error(f"Error reading lesson {lesson_id}: {e}")
             return None
     
-    def update_script_content(self, script_id: str, content: str) -> bool:
-        """Update the content of a script"""
-        if script_id not in self.script_files:
+    def update_lesson_content(self, lesson_id: str, content: str) -> bool:
+        """Update the content of a lesson"""
+        if lesson_id not in self.lesson_files:
             return False
         
         try:
-            with open(self.script_files[script_id], 'w', encoding='utf-8') as f:
+            with open(self.lesson_files[lesson_id], 'w', encoding='utf-8') as f:
                 f.write(content)
             
-            # Reload the script
-            return self.reload_script(script_id)
+            # Reload the lesson
+            return self.reload_lesson(lesson_id)
             
         except Exception as e:
-            logging.error(f"Error updating script {script_id}: {e}")
+            logging.error(f"Error updating lesson {lesson_id}: {e}")
             return False
     
-    def get_script_state(self, script_id: str) -> Optional[Dict[str, any]]:
-        """Get the current state of a script"""
-        return self.orchestrator.get_script_state(script_id)
+    def get_lesson_state(self, lesson_id: str) -> Optional[Dict[str, Any]]:
+        """Get the current state of a lesson"""
+        return self.orchestrator.get_lesson_state(lesson_id)
     
-    def start_script(self, script_id: str) -> bool:
-        """Start a script"""
-        return self.orchestrator.start_script(script_id)
+    def start_lesson(self, lesson_id: str) -> bool:
+        """Start a lesson"""
+        return self.orchestrator.start_lesson(lesson_id)
     
-    def stop_script(self, script_id: str) -> bool:
-        """Stop a script"""
-        return self.orchestrator.stop_script(script_id)
+    def stop_lesson(self, lesson_id: str) -> bool:
+        """Stop a lesson"""
+        return self.orchestrator.stop_lesson(lesson_id)
     
-    def handle_gesture(self, script_id: str, gesture_data: Dict[str, any]):
-        """Handle gesture for a script"""
-        self.orchestrator.handle_gesture(script_id, gesture_data)
+    def handle_gesture(self, lesson_id: str, gesture_data: Dict[str, Any]):
+        """Handle gesture for a lesson"""
+        self.orchestrator.handle_gesture(lesson_id, gesture_data)
     
     def tick(self):
-        """Handle periodic tick for all scripts"""
+        """Handle periodic tick for all lessons"""
         self.orchestrator.tick()
     
     def shutdown(self):
-        """Shutdown the script manager"""
+        """Shutdown the lesson manager"""
         if self.file_observer:
             self.file_observer.stop()
             self.file_observer.join()
         
-        # Stop all scripts
-        for script_id in list(self.script_metadata.keys()):
-            self.stop_script(script_id)
+        # Stop all lessons
+        for lesson_id in list(self.lesson_metadata.keys()):
+            self.stop_lesson(lesson_id)
         
-        logging.info("Script manager shutdown complete") 
+        logging.info("Lesson manager shutdown complete") 

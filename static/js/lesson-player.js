@@ -24,6 +24,12 @@
 // Import the reusable dev tools module
 import { attachGestureDevTools } from './gesture-dev-tools.js';
 
+// Plugin registry for per-lesson plugins
+window._lessonPlugin = null;
+window.registerLessonPlugin = function(plugin) {
+    window._lessonPlugin = plugin;
+};
+
 class LessonPlayer {
     constructor() {
         this.webcamManager = new WebcamManager();
@@ -543,6 +549,11 @@ class LessonPlayer {
 }
 
 // Initialize lesson player when DOM is loaded
+// After creating LessonPlayer, call plugin.init if present
+
 document.addEventListener('DOMContentLoaded', () => {
-    new LessonPlayer();
+    const player = new LessonPlayer();
+    if (window._lessonPlugin && typeof window._lessonPlugin.init === 'function') {
+        window._lessonPlugin.init(player);
+    }
 }); 

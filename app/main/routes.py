@@ -4,7 +4,7 @@ Main routes for Chandra Interactive Education Engine
 
 from flask import render_template, jsonify, request, current_app
 from . import main_bp
-from app.scripts.manager import ScriptManager
+from app.scripts.manager import LessonManager
 from app.lessons.routes import get_lesson
 from app.auth.decorators import login_required, author_required
 import psutil
@@ -35,20 +35,19 @@ def lesson_detail(lesson_id):
 @main_bp.route('/lesson/<lesson_id>/play')
 def lesson_player(lesson_id):
     """Lesson player page"""
-    # Get lesson info from script engine
-    manager = ScriptManager()
-    scripts = {script['id']: script for script in manager.get_script_list()}
-    script = scripts.get(lesson_id)
-    if not script:
+    # Get lesson info from lesson engine
+    manager = LessonManager()
+    lessons = {lesson['id']: lesson for lesson in manager.get_lesson_list()}
+    lesson = lessons.get(lesson_id)
+    if not lesson:
         return render_template('lesson_player.html', error='Lesson not found', lesson_id=lesson_id)
-    lesson = {
-        'id': script['id'],
-        'title': script['name'],
-        'description': script['description'],
-        'difficulty': script.get('difficulty', 'beginner'),
-        'script': script['id']
+    lesson_out = {
+        'id': lesson['id'],
+        'title': lesson['name'],
+        'description': lesson['description'],
+        'difficulty': lesson.get('difficulty', 'beginner'),
     }
-    return render_template('lesson_player.html', lesson=lesson, script_id=script['id'])
+    return render_template('lesson_player.html', lesson=lesson_out, script_id=lesson['id'])
 
 @main_bp.route('/scripts')
 @author_required
@@ -82,16 +81,16 @@ def api_dev_status():
             'static_folder': current_app.static_folder
         }
         
-        # Get script manager status
-        manager = ScriptManager()
-        running_scripts = []
-        # FIX: Use active_scripts and check is_running
-        for sandbox in getattr(manager.orchestrator, 'active_scripts', {}).values():
-            if getattr(sandbox, 'is_running', False):
-                running_scripts.append({
-                    'id': getattr(sandbox, 'script_id', 'unknown'),
-                    'state': getattr(sandbox, 'state', {}),
-                    'uptime': getattr(sandbox, 'start_time', 0)
+        # Get lesson manager status
+        manager = LessonManager()
+        running_lessons = []
+        # FIX: Use active_lessons and check is_running
+        for environment in getattr(manager.orchestrator, 'active_lessons', {}).values():
+            if getattr(environment, 'api', None) and getattr(environment.api, '_running', False):
+                running_lessons.append({
+                    'id': getattr(environment, 'lesson_id', 'unknown'),
+                    'state': getattr(environment.api.state, '_state', {}),
+                    'uptime': getattr(environment.api.state, '_start_time', 0)
                 })
         
         return jsonify({
@@ -112,10 +111,10 @@ def api_dev_status():
                     'connected_clients': len(connected_clients),
                     'app_info': app_info
                 },
-                'scripts': {
-                    'running_count': len(running_scripts),
-                    'running_scripts': running_scripts,
-                    'total_scripts': len(manager.get_script_list())
+                'lessons': {
+                    'running_count': len(running_lessons),
+                    'running_lessons': running_lessons,
+                    'total_lessons': len(manager.get_lesson_list())
                 },
                 'errors': {
                     'recent_count': len(recent_errors),

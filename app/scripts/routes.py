@@ -1,6 +1,6 @@
 """
-Script routes for Chandra Script Engine
-Provides API endpoints for script management and execution
+Lesson routes for Chandra Lesson Engine v2
+Provides API endpoints for lesson management and execution
 """
 
 import json
@@ -8,212 +8,244 @@ import logging
 from flask import jsonify, request, current_app
 from flask_socketio import emit
 from . import scripts_bp
-from .manager import ScriptManager
+from .manager import LessonManager
 from app.analytics.collector import log_script_event, update_lesson_progress
 from app.auth.decorators import author_required
 
-# Global script manager instance
-script_manager = None
+# Global lesson manager instance
+lesson_manager = None
 
-def get_script_manager():
-    """Get or create the global script manager instance"""
-    global script_manager
-    if script_manager is None:
-        script_manager = ScriptManager()
-    return script_manager
+def get_lesson_manager():
+    """Get or create the global lesson manager instance"""
+    global lesson_manager
+    if lesson_manager is None:
+        lesson_manager = LessonManager()
+    return lesson_manager
 
-@scripts_bp.route('/', methods=['GET'])
-def list_scripts():
-    """List all available scripts."""
+def log_error(message):
+    """Log an error message"""
+    logging.error(f"[Lesson API] {message}")
+
+# REST API Routes
+
+@scripts_bp.route('/lessons', methods=['GET'])
+def list_lessons():
+    """List all available lessons."""
     try:
-        manager = get_script_manager()
-        scripts = manager.get_script_list()
+        manager = get_lesson_manager()
+        lessons = manager.get_lesson_list()
+        
         return jsonify({
             'success': True,
-            'scripts': scripts,
-            'count': len(scripts)
+            'lessons': lessons,
+            'count': len(lessons)
         })
     except Exception as e:
-        logging.error(f"Error listing scripts: {e}")
+        log_error(f"Error listing lessons: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)
         }), 500
 
-@scripts_bp.route('/<script_id>', methods=['GET'])
-def get_script(script_id):
-    """Get script content and metadata."""
+@scripts_bp.route('/lessons/<lesson_id>', methods=['GET'])
+def get_lesson(lesson_id):
+    """Get lesson information."""
     try:
-        manager = get_script_manager()
+        manager = get_lesson_manager()
         
-        # Get script content
-        content = manager.get_script_content(script_id)
-        if content is None:
+        # Get lesson metadata
+        metadata = manager.lesson_metadata.get(lesson_id)
+        if not metadata:
             return jsonify({
                 'success': False,
-                'error': f'Script {script_id} not found'
+                'error': f'Lesson {lesson_id} not found'
             }), 404
         
-        # Get script metadata
-        metadata = manager.script_metadata.get(script_id)
+        # Get lesson content
+        content = manager.get_lesson_content(lesson_id)
         
-        # Get current state if script is running
-        state = manager.get_script_state(script_id)
+        # Get lesson state
+        state = manager.get_lesson_state(lesson_id)
         
         return jsonify({
             'success': True,
-            'script': {
-                'id': script_id,
+            'lesson': {
+                'id': lesson_id,
+                'metadata': metadata.__dict__,
                 'content': content,
-                'metadata': metadata.__dict__ if metadata else None,
                 'state': state
             }
         })
     except Exception as e:
-        logging.error(f"Error getting script {script_id}: {e}")
+        log_error(f"Error getting lesson {lesson_id}: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)
         }), 500
 
-@scripts_bp.route('/<script_id>', methods=['PUT'])
-def update_script(script_id):
-    """Update script content."""
+@scripts_bp.route('/lessons', methods=['POST'])
+@author_required
+def create_lesson():
+    """Create a new lesson."""
     try:
         data = request.get_json()
-        if not data or 'content' not in data:
+        lesson_id = data.get('lesson_id')
+        template = data.get('template', 'basic')
+        
+        if not lesson_id:
             return jsonify({
                 'success': False,
-                'error': 'Content is required'
+                'error': 'lesson_id is required'
             }), 400
         
-        manager = get_script_manager()
-        success = manager.update_script_content(script_id, data['content'])
+        manager = get_lesson_manager()
+        success = manager.create_lesson(lesson_id, template)
         
         if success:
             return jsonify({
                 'success': True,
-                'message': f'Script {script_id} updated successfully'
+                'message': f'Lesson {lesson_id} created successfully',
+                'lesson_id': lesson_id
             })
         else:
             return jsonify({
                 'success': False,
-                'error': f'Failed to update script {script_id}'
+                'error': f'Failed to create lesson {lesson_id}'
             }), 500
     except Exception as e:
-        logging.error(f"Error updating script {script_id}: {e}")
+        log_error(f"Error creating lesson: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)
         }), 500
 
-@scripts_bp.route('/<script_id>/validate', methods=['POST'])
-def validate_script(script_id):
-    """Validate script syntax and safety."""
+@scripts_bp.route('/lessons/<lesson_id>', methods=['PUT'])
+@author_required
+def update_lesson(lesson_id):
+    """Update lesson content."""
     try:
         data = request.get_json()
-        content = data.get('content') if data else None
+        content = data.get('content')
         
         if not content:
             return jsonify({
                 'success': False,
-                'error': 'Script content is required'
+                'error': 'content is required'
             }), 400
         
-        # Basic validation
-        errors = []
-        warnings = []
+        manager = get_lesson_manager()
+        success = manager.update_lesson_content(lesson_id, content)
         
-        # Check for restricted imports
-        restricted_imports = ['os', 'sys', 'subprocess', 'importlib', 'eval', 'exec']
-        for restricted in restricted_imports:
-            if f'import {restricted}' in content or f'from {restricted}' in content:
-                errors.append(f'Import of {restricted} is not allowed')
+        if success:
+            return jsonify({
+                'success': True,
+                'message': f'Lesson {lesson_id} updated successfully'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'Failed to update lesson {lesson_id}'
+            }), 500
+    except Exception as e:
+        log_error(f"Error updating lesson {lesson_id}: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@scripts_bp.route('/lessons/<lesson_id>', methods=['DELETE'])
+@author_required
+def delete_lesson(lesson_id):
+    """Delete a lesson."""
+    try:
+        manager = get_lesson_manager()
         
-        # Check for dangerous functions
-        dangerous_functions = ['eval', 'exec', 'compile', 'open']
-        for func in dangerous_functions:
-            if f'{func}(' in content:
-                errors.append(f'Use of {func}() is not allowed')
+        # Stop the lesson if it's running
+        manager.stop_lesson(lesson_id)
         
-        # Check for required hooks
-        if '@on_start' not in content:
-            warnings.append('No @on_start hook found')
-        if '@on_gesture' not in content:
-            warnings.append('No @on_gesture hook found')
+        # Remove lesson files
+        lesson_file = manager.lessons_dir / f"{lesson_id}.py"
+        metadata_file = manager.lessons_dir / f"{lesson_id}.json"
+        
+        if lesson_file.exists():
+            lesson_file.unlink()
+        
+        if metadata_file.exists():
+            metadata_file.unlink()
+        
+        # Unload from manager
+        manager.unload_lesson(lesson_id)
         
         return jsonify({
             'success': True,
-            'valid': len(errors) == 0,
-            'errors': errors,
-            'warnings': warnings
+            'message': f'Lesson {lesson_id} deleted successfully'
         })
     except Exception as e:
-        logging.error(f"Error validating script {script_id}: {e}")
+        log_error(f"Error deleting lesson {lesson_id}: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)
         }), 500
 
-@scripts_bp.route('/<script_id>/start', methods=['POST'])
-def start_script(script_id):
-    """Start a script."""
+@scripts_bp.route('/lessons/<lesson_id>/start', methods=['POST'])
+def start_lesson(lesson_id):
+    """Start a lesson."""
     try:
-        manager = get_script_manager()
-        success = manager.start_script(script_id)
+        manager = get_lesson_manager()
+        success = manager.start_lesson(lesson_id)
         
         if success:
             return jsonify({
                 'success': True,
-                'message': f'Script {script_id} started successfully'
+                'message': f'Lesson {lesson_id} started successfully'
             })
         else:
             return jsonify({
                 'success': False,
-                'error': f'Failed to start script {script_id}'
+                'error': f'Failed to start lesson {lesson_id}'
             }), 500
     except Exception as e:
-        logging.error(f"Error starting script {script_id}: {e}")
+        log_error(f"Error starting lesson {lesson_id}: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)
         }), 500
 
-@scripts_bp.route('/<script_id>/stop', methods=['POST'])
-def stop_script(script_id):
-    """Stop a script."""
+@scripts_bp.route('/lessons/<lesson_id>/stop', methods=['POST'])
+def stop_lesson(lesson_id):
+    """Stop a lesson."""
     try:
-        manager = get_script_manager()
-        success = manager.stop_script(script_id)
+        manager = get_lesson_manager()
+        success = manager.stop_lesson(lesson_id)
         
         if success:
             return jsonify({
                 'success': True,
-                'message': f'Script {script_id} stopped successfully'
+                'message': f'Lesson {lesson_id} stopped successfully'
             })
         else:
             return jsonify({
                 'success': False,
-                'error': f'Failed to stop script {script_id}'
+                'error': f'Failed to stop lesson {lesson_id}'
             }), 500
     except Exception as e:
-        logging.error(f"Error stopping script {script_id}: {e}")
+        log_error(f"Error stopping lesson {lesson_id}: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)
         }), 500
 
-@scripts_bp.route('/<script_id>/state', methods=['GET'])
-def get_script_state(script_id):
-    """Get the current state of a script."""
+@scripts_bp.route('/lessons/<lesson_id>/state', methods=['GET'])
+def get_lesson_state(lesson_id):
+    """Get lesson state."""
     try:
-        manager = get_script_manager()
-        state = manager.get_script_state(script_id)
+        manager = get_lesson_manager()
+        state = manager.get_lesson_state(lesson_id)
         
         if state is None:
             return jsonify({
                 'success': False,
-                'error': f'Script {script_id} not found or not running'
+                'error': f'Lesson {lesson_id} not found or not running'
             }), 404
         
         return jsonify({
@@ -221,318 +253,311 @@ def get_script_state(script_id):
             'state': state
         })
     except Exception as e:
-        logging.error(f"Error getting script state {script_id}: {e}")
+        log_error(f"Error getting lesson state for {lesson_id}: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)
         }), 500
 
-@scripts_bp.route('/<script_id>/events', methods=['GET'])
-def get_script_events(script_id):
-    """Get recent events for a script."""
+@scripts_bp.route('/lessons/<lesson_id>/validate', methods=['POST'])
+def validate_lesson(lesson_id):
+    """Validate a lesson."""
     try:
-        manager = get_script_manager()
-        limit = request.args.get('limit', 100, type=int)
-        events = manager.orchestrator.get_recent_events(script_id, limit)
+        manager = get_lesson_manager()
+        
+        # Get lesson content
+        content = manager.get_lesson_content(lesson_id)
+        if not content:
+            return jsonify({
+                'success': False,
+                'error': f'Lesson {lesson_id} not found'
+            }), 404
+        
+        # Basic syntax validation
+        try:
+            compile(content, f'<lesson_{lesson_id}>', 'exec')
+            syntax_valid = True
+            syntax_errors = []
+        except SyntaxError as e:
+            syntax_valid = False
+            syntax_errors = [str(e)]
+        except Exception as e:
+            syntax_valid = False
+            syntax_errors = [str(e)]
+        
+        # Check for required hooks
+        required_hooks = ['@on_start', '@on_gesture']
+        missing_hooks = []
+        
+        for hook in required_hooks:
+            if hook not in content:
+                missing_hooks.append(hook)
+        
+        # Check for Python tool usage
+        python_tools = ['import numpy', 'import pandas', 'import matplotlib', 
+                       'import scipy', 'import sklearn', 'import seaborn']
+        used_tools = []
+        
+        for tool in python_tools:
+            if tool in content:
+                used_tools.append(tool.split()[1])
+        
+        # Validation result
+        is_valid = syntax_valid and len(missing_hooks) == 0
         
         return jsonify({
             'success': True,
-            'events': events,
-            'count': len(events)
+            'valid': is_valid,
+            'syntax_valid': syntax_valid,
+            'syntax_errors': syntax_errors,
+            'missing_hooks': missing_hooks,
+            'used_tools': used_tools,
+            'recommendations': []
         })
     except Exception as e:
-        logging.error(f"Error getting script events {script_id}: {e}")
+        log_error(f"Error validating lesson {lesson_id}: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)
         }), 500
 
-@scripts_bp.route('/', methods=['POST'])
-@author_required
-def create_script():
-    """Create a new script (authors and admins only)."""
+@scripts_bp.route('/lessons/<lesson_id>/analyze', methods=['GET'])
+def analyze_lesson(lesson_id):
+    """Analyze a lesson for complexity and tool usage."""
     try:
-        data = request.get_json()
-        if not data or 'script_id' not in data:
+        manager = get_lesson_manager()
+        
+        # Get lesson content
+        content = manager.get_lesson_content(lesson_id)
+        if not content:
             return jsonify({
                 'success': False,
-                'error': 'Script ID is required'
-            }), 400
+                'error': f'Lesson {lesson_id} not found'
+            }), 404
         
-        script_id = data['script_id']
-        template = data.get('template', 'basic')
+        # Analyze imports
+        imports = []
+        for line in content.split('\n'):
+            if line.strip().startswith('import ') or line.strip().startswith('from '):
+                imports.append(line.strip())
         
-        manager = get_script_manager()
-        success = manager.create_script(script_id, template)
+        # Analyze hooks
+        hooks = []
+        hook_patterns = ['@on_start', '@on_gesture', '@on_tick', '@on_complete']
+        for pattern in hook_patterns:
+            if pattern in content:
+                hooks.append(pattern)
         
-        if success:
-            return jsonify({
-                'success': True,
-                'message': f'Script {script_id} created successfully',
-                'script_id': script_id
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': f'Failed to create script {script_id}'
-            }), 500
-    except Exception as e:
-        logging.error(f"Error creating script: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@scripts_bp.route('/<script_id>', methods=['DELETE'])
-@author_required
-def delete_script(script_id):
-    """Delete a script (authors and admins only)."""
-    try:
-        manager = get_script_manager()
-        manager.unload_script(script_id)
-        
-        # Remove the file
-        script_file = manager.scripts_dir / f"{script_id}.py"
-        metadata_file = manager.scripts_dir / f"{script_id}.json"
-        
-        if script_file.exists():
-            script_file.unlink()
-        if metadata_file.exists():
-            metadata_file.unlink()
-        
-        return jsonify({
-            'success': True,
-            'message': f'Script {script_id} deleted successfully'
-        })
-    except Exception as e:
-        logging.error(f"Error deleting script {script_id}: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@scripts_bp.route('/templates', methods=['GET'])
-def get_templates():
-    """Get available script templates."""
-    templates = [
-        {
-            'id': 'basic',
-            'name': 'Basic Template',
-            'description': 'A simple template with basic hooks',
-            'hooks': ['on_start', 'on_gesture', 'on_tick']
-        },
-        {
-            'id': 'counting_fingers',
-            'name': 'Counting Fingers',
-            'description': 'A lesson that counts fingers and tracks progress',
-            'hooks': ['on_start', 'on_gesture', 'on_tick']
-        },
-        {
-            'id': 'letter_tracing',
-            'name': 'Letter Tracing',
-            'description': 'A lesson for practicing letter writing with gestures',
-            'hooks': ['on_start', 'on_gesture', 'on_tick']
+        # Analyze Python tools usage
+        tools = {
+            'numpy': 'Numerical computing',
+            'pandas': 'Data manipulation',
+            'matplotlib': 'Data visualization',
+            'scipy': 'Scientific computing',
+            'sklearn': 'Machine learning',
+            'seaborn': 'Statistical visualization',
+            'requests': 'HTTP requests',
+            'json': 'JSON handling',
+            'time': 'Time utilities',
+            'datetime': 'Date/time handling',
+            'math': 'Mathematical functions',
+            'random': 'Random number generation',
+            'collections': 'Data structures',
+            'itertools': 'Iteration tools',
+            'functools': 'Function tools'
         }
-    ]
-    
-    return jsonify({
-        'success': True,
-        'templates': templates
-    })
-
-# WebSocket event handlers for real-time script interaction
-def handle_gesture_event(script_id, gesture_data, session_id=None, user_id=None):
-    """Handle gesture events from WebSocket"""
-    try:
-        manager = get_script_manager()
-        manager.handle_gesture(script_id, gesture_data)
         
-        # Log gesture event for analytics
-        log_script_event(
-            event_type='gesture',
-            session_id=session_id or 'unknown',
-            script_id=script_id,
-            user_id=user_id,
-            data={
-                'gesture_type': gesture_data.get('gesture'),
-                'confidence': gesture_data.get('confidence'),
-                'landmarks': gesture_data.get('landmarks')
+        used_tools = []
+        for tool, description in tools.items():
+            if f'import {tool}' in content or f'from {tool}' in content:
+                used_tools.append((tool, description))
+        
+        # Complexity analysis
+        lines = len(content.split('\n'))
+        functions = content.count('def ')
+        variables = content.count(' = ')
+        
+        if lines < 50:
+            complexity = "Simple"
+        elif lines < 100:
+            complexity = "Moderate"
+        else:
+            complexity = "Complex"
+        
+        return jsonify({
+            'success': True,
+            'analysis': {
+                'imports': imports,
+                'hooks': hooks,
+                'used_tools': used_tools,
+                'complexity': {
+                    'lines': lines,
+                    'functions': functions,
+                    'variables': variables,
+                    'level': complexity
+                }
             }
-        )
+        })
     except Exception as e:
-        logging.error(f"Error handling gesture for script {script_id}: {e}")
+        log_error(f"Error analyzing lesson {lesson_id}: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
-def handle_script_tick():
-    """Handle periodic tick for all scripts"""
+# WebSocket event handlers
+
+def handle_lesson_gesture(data):
+    """Handle gesture events for lessons"""
+    lesson_id = data.get('lesson_id')
+    gesture_data = data.get('gesture_data', {})
+    session_id = data.get('session_id')
+    user_id = data.get('user_id')
+    
+    if lesson_id and gesture_data:
+        try:
+            manager = get_lesson_manager()
+            manager.handle_gesture(lesson_id, gesture_data)
+            
+            # Log gesture event
+            log_script_event(
+                event_type='gesture',
+                session_id=session_id or 'unknown',
+                script_id=lesson_id,
+                user_id=user_id,
+                data=gesture_data
+            )
+            
+            # Get updated state
+            state = manager.get_lesson_state(lesson_id)
+            if state:
+                emit('lesson_state_updated', {
+                    'lesson_id': lesson_id,
+                    'state': state
+                })
+                
+        except Exception as e:
+            log_error(f"Gesture handling error for {lesson_id}: {str(e)}")
+            emit('lesson_error', {
+                'lesson_id': lesson_id,
+                'error': str(e)
+            })
+
+def handle_lesson_tick():
+    """Handle periodic tick for all lessons"""
     try:
-        manager = get_script_manager()
+        manager = get_lesson_manager()
         manager.tick()
     except Exception as e:
-        logging.error(f"Error in script tick: {e}")
+        log_error(f"Error in lesson tick: {str(e)}")
 
 def register_socketio_handlers(socketio):
-    """Register WebSocket event handlers with the socketio instance"""
+    """Register WebSocket event handlers"""
     
-    # Import dev dashboard tracking functions
-    from app.main.routes import add_connected_client, remove_connected_client, log_error
+    @socketio.on('lesson_gesture')
+    def on_lesson_gesture(data):
+        """Handle lesson gesture events via WebSocket"""
+        handle_lesson_gesture(data)
     
-    # Track connections using a simple counter for now
-    connection_count = 0
-    
-    @socketio.on('connect')
-    def on_connect():
-        """Handle client connection"""
-        nonlocal connection_count
-        connection_count += 1
-        add_connected_client(f"client_{connection_count}")
-        print(f"Client connected: {connection_count}")
-    
-    @socketio.on('disconnect')
-    def on_disconnect():
-        """Handle client disconnection"""
-        nonlocal connection_count
-        connection_count = max(0, connection_count - 1)
-        print(f"Client disconnected. Active connections: {connection_count}")
-    
-    @socketio.on('script_gesture')
-    def on_script_gesture(data):
-        """Handle gesture events for scripts via WebSocket"""
-        script_id = data.get('script_id')
-        gesture_data = data.get('gesture_data', {})
+    @socketio.on('lesson_start')
+    def on_lesson_start(data):
+        """Handle lesson start events via WebSocket"""
+        lesson_id = data.get('lesson_id')
         session_id = data.get('session_id')
         user_id = data.get('user_id')
         
-        if script_id:
+        if lesson_id:
             try:
-                handle_gesture_event(script_id, gesture_data, session_id, user_id)
-                emit('script_gesture_processed', {
-                    'script_id': script_id,
-                    'success': True
-                })
-            except Exception as e:
-                log_error(f"Gesture processing error for script {script_id}: {str(e)}")
-                emit('script_gesture_processed', {
-                    'script_id': script_id,
-                    'success': False,
-                    'error': str(e)
-                })
-        else:
-            emit('script_gesture_processed', {
-                'success': False,
-                'error': 'Script ID is required'
-            })
-
-    @socketio.on('script_start')
-    def on_script_start(data):
-        """Handle script start events via WebSocket"""
-        script_id = data.get('script_id')
-        session_id = data.get('session_id')
-        user_id = data.get('user_id')
-        
-        if script_id:
-            try:
-                manager = get_script_manager()
-                success = manager.start_script(script_id)
+                manager = get_lesson_manager()
+                success = manager.start_lesson(lesson_id)
                 
-                # Log script start event
+                # Log lesson start event
                 if success:
                     log_script_event(
                         event_type='lesson_start',
                         session_id=session_id or 'unknown',
-                        script_id=script_id,
+                        script_id=lesson_id,
                         user_id=user_id,
                         data={'status': 'started'}
                     )
                 
-                emit('script_started', {
-                    'script_id': script_id,
+                emit('lesson_started', {
+                    'lesson_id': lesson_id,
                     'success': success
                 })
             except Exception as e:
-                log_error(f"Script start error for {script_id}: {str(e)}")
-                emit('script_started', {
-                    'script_id': script_id,
+                log_error(f"Lesson start error for {lesson_id}: {str(e)}")
+                emit('lesson_started', {
+                    'lesson_id': lesson_id,
                     'success': False,
                     'error': str(e)
                 })
         else:
-            emit('script_started', {
+            emit('lesson_started', {
                 'success': False,
-                'error': 'Script ID is required'
+                'error': 'Lesson ID is required'
             })
-
-    @socketio.on('script_stop')
-    def on_script_stop(data):
-        """Handle script stop events via WebSocket"""
-        script_id = data.get('script_id')
+    
+    @socketio.on('lesson_stop')
+    def on_lesson_stop(data):
+        """Handle lesson stop events via WebSocket"""
+        lesson_id = data.get('lesson_id')
         session_id = data.get('session_id')
         user_id = data.get('user_id')
-        completion_data = data.get('completion_data', {})
         
-        if script_id:
+        if lesson_id:
             try:
-                manager = get_script_manager()
-                success = manager.stop_script(script_id)
+                manager = get_lesson_manager()
+                success = manager.stop_lesson(lesson_id)
                 
-                # Log script stop event
+                # Log lesson stop event
                 if success:
                     log_script_event(
-                        event_type='lesson_complete',
+                        event_type='lesson_stop',
                         session_id=session_id or 'unknown',
-                        script_id=script_id,
+                        script_id=lesson_id,
                         user_id=user_id,
-                        data=completion_data
+                        data={'status': 'stopped'}
                     )
-                    
-                    # Update progress if user_id is provided
-                    if user_id and completion_data:
-                        update_lesson_progress(
-                            user_id=user_id,
-                            lesson_id=script_id,
-                            completed=completion_data.get('completed', False),
-                            score=completion_data.get('score', 0),
-                            attempts=completion_data.get('attempts', 1),
-                            time_spent=completion_data.get('time_spent', 0)
-                        )
                 
-                emit('script_stopped', {
-                    'script_id': script_id,
+                emit('lesson_stopped', {
+                    'lesson_id': lesson_id,
                     'success': success
                 })
             except Exception as e:
-                log_error(f"Script stop error for {script_id}: {str(e)}")
-                emit('script_stopped', {
-                    'script_id': script_id,
+                log_error(f"Lesson stop error for {lesson_id}: {str(e)}")
+                emit('lesson_stopped', {
+                    'lesson_id': lesson_id,
                     'success': False,
                     'error': str(e)
                 })
         else:
-            emit('script_stopped', {
+            emit('lesson_stopped', {
                 'success': False,
-                'error': 'Script ID is required'
+                'error': 'Lesson ID is required'
             })
-
-    @socketio.on('get_script_state')
-    def on_get_script_state(data):
-        """Get script state via WebSocket"""
-        script_id = data.get('script_id')
+    
+    @socketio.on('get_lesson_state')
+    def on_get_lesson_state(data):
+        """Get lesson state via WebSocket"""
+        lesson_id = data.get('lesson_id')
         
-        if script_id:
+        if lesson_id:
             try:
-                manager = get_script_manager()
-                state = manager.get_script_state(script_id)
+                manager = get_lesson_manager()
+                state = manager.get_lesson_state(lesson_id)
                 
-                emit('script_state', {
-                    'script_id': script_id,
+                emit('lesson_state', {
+                    'lesson_id': lesson_id,
                     'state': state
                 })
             except Exception as e:
-                log_error(f"Script state error for {script_id}: {str(e)}")
-                emit('script_state', {
-                    'script_id': script_id,
+                log_error(f"Error getting lesson state for {lesson_id}: {str(e)}")
+                emit('lesson_state', {
+                    'lesson_id': lesson_id,
                     'error': str(e)
                 })
         else:
-            emit('script_state', {
-                'error': 'Script ID is required'
+            emit('lesson_state', {
+                'error': 'Lesson ID is required'
             }) 

@@ -30,46 +30,43 @@
   - [x] Build Bootstrap "Counting Fingers" proof‑of‑concept
   - [x] Throttle event frequency to 10 Hz
 
-## 2 · Script Engine
-- [x] **Python Sandbox**
-  - [x] Implement restricted namespace (`restrictedpython`)
-  - [x] Expose hooks: `on_start`, `on_gesture`, `on_tick`
-  - [x] Safe execution environment with limited Python functions
-  - [x] Security measures to prevent dangerous operations
-- [x] **Lesson Orchestrator**
-  - [x] Load metadata & enforce sequence
-  - [x] Timestamp & persist events
-  - [x] Script lifecycle management (load, start, stop, tick)
-  - [x] Event logging and state management
-- [x] **Hot Reload**
-  - [x] File‑watcher to reload `scripts/` modules without restart
-  - [x] Automatic script discovery and loading
-  - [x] Real-time script updates during development
-- [x] **SDK Docs**
-  - [x] Docstring examples & README section
-  - [x] Provide sample Python + JS stubs
-  - [x] Comprehensive documentation in `docs/script_engine.md`
-  - [x] API reference and usage examples
-- [x] **Port Sample Lessons**
-  - [x] Counting Fingers (`scripts/counting_fingers.py`)
-  - [x] Letter Tracing Wizard (`scripts/letter_tracing.py`)
+## 2 · Lesson Engine v2 (Refactored)
+- [x] **Robust Python Environment**
+  - [x] Replace restricted sandbox with flexible Python execution
+  - [x] Support for numpy, pandas, matplotlib, scipy, sklearn
+  - [x] Safe module import system with allowlist
+  - [x] Better error handling and debugging capabilities
+- [x] **Enhanced Lesson API**
+  - [x] Clean state management with `state.update()` and `state.get()`
+  - [x] Improved event system with `emit()` and `log()`
+  - [x] Decorator-based hooks: `@on_start`, `@on_gesture`, `@on_tick`, `@on_complete`
+  - [x] Better lesson lifecycle management
+- [x] **Python Tool Integration**
+  - [x] Data science lessons with numpy/pandas/matplotlib
+  - [x] Statistical analysis capabilities
+  - [x] Real-time data processing and visualization
+  - [x] Machine learning integration ready
+- [x] **Improved Lesson Manager**
+  - [x] Hot reload for `lessons/` directory
+  - [x] Enhanced metadata with tags, difficulty, duration
+  - [x] Better lesson discovery and validation
+  - [x] Template system for quick lesson creation
+- [x] **Enhanced CLI Tool (`eductl_v2.py`)**
+  - [x] `eductl new-lesson <name>` - Create new lessons
+  - [x] `eductl run <lesson>` - Run lessons with progress tracking
+  - [x] `eductl validate <lesson>` - Validate lesson syntax and hooks
+  - [x] `eductl analyze <lesson>` - Analyze Python tool usage and complexity
+  - [x] `eductl install-deps` - Install lesson dependencies
+  - [x] `eductl info <lesson>` - Show detailed lesson information
+- [x] **Sample Lessons**
+  - [x] Counting Fingers (`lessons/counting_fingers.py`) - Enhanced with statistics
+  - [x] Data Analysis (`lessons/data_analysis.py`) - Demonstrates Python tools
   - [x] Basic template for new lessons
-- [x] **Script Management Interface**
-  - [x] Web-based script editor with syntax highlighting
-  - [x] Real-time validation and error checking
-  - [x] Script creation with templates
-  - [x] Script state monitoring and event logging
-- [x] **CLI Tool (`eductl.py`)**
-  - [x] `eductl new-script <name>` - Create new scripts
-  - [x] `eductl run <lesson>` - Run scripts
-  - [x] `eductl export --zip` - Export scripts
-  - [x] `eductl validate <script>` - Validate script syntax
-  - [x] `eductl info <script>` - Show script information
-- [x] **API Endpoints**
-  - [x] RESTful API for script management
+- [x] **API Endpoints v2**
+  - [x] RESTful API for lesson management
   - [x] WebSocket integration for real-time communication
-  - [x] Script validation and state monitoring
-  - [x] Event streaming and logging
+  - [x] Lesson validation and state monitoring
+  - [x] Analysis and complexity assessment
 
 ---
 
