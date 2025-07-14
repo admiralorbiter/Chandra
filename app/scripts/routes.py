@@ -560,4 +560,6 @@ def register_socketio_handlers(socketio):
         else:
             emit('lesson_state', {
                 'error': 'Lesson ID is required'
-            }) 
+            })
+
+# All compatibility routes and WebSocket handlers for old script endpoints/events have been removed. 

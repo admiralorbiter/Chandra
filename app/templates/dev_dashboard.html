@@ -188,21 +188,21 @@
                     <div class="card-header">
                         <h5 class="mb-0">
                             <i class="bi bi-code-slash text-primary"></i>
-                            Script Engine Status
+                            Lesson Engine Status
                         </h5>
                     </div>
                     <div class="card-body">
                         <div class="row mb-3">
                             <div class="col-md-4">
                                 <div class="text-center">
-                                    <h4 id="total-scripts">--</h4>
-                                    <small class="text-muted">Total Scripts</small>
+                                    <h4 id="total-lessons">--</h4>
+                                    <small class="text-muted">Total Lessons</small>
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="text-center">
-                                    <h4 id="running-scripts">--</h4>
-                                    <small class="text-muted">Running Scripts</small>
+                                    <h4 id="running-lessons">--</h4>
+                                    <small class="text-muted">Running Lessons</small>
                                 </div>
                             </div>
                             <div class="col-md-4">
@@ -212,8 +212,8 @@
                                 </div>
                             </div>
                         </div>
-                        <div id="running-scripts-list">
-                            <!-- Running scripts will be populated here -->
+                        <div id="running-lessons-list">
+                            <!-- Running lessons will be populated here -->
                         </div>
                     </div>
                 </div>
@@ -330,8 +330,8 @@
             document.getElementById('uptime').textContent = data.server.uptime;
             
             // Script metrics
-            document.getElementById('total-scripts').textContent = data.scripts.total_scripts;
-            document.getElementById('running-scripts').textContent = data.scripts.running_count;
+            document.getElementById('total-lessons').textContent = data.scripts.total_scripts;
+            document.getElementById('running-lessons').textContent = data.scripts.running_count;
             document.getElementById('connected-clients').textContent = data.server.connected_clients;
             
             // Server info
@@ -359,7 +359,7 @@
         }
 
         function updateRunningScripts(scripts) {
-            const container = document.getElementById('running-scripts-list');
+            const container = document.getElementById('running-lessons-list');
             if (scripts.length === 0) {
                 container.innerHTML = '<p class="text-muted text-center">No scripts currently running</p>';
                 return;

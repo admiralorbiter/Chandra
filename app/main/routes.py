@@ -49,12 +49,6 @@ def lesson_player(lesson_id):
     }
     return render_template('lesson_player.html', lesson=lesson_out, script_id=lesson['id'])
 
-@main_bp.route('/scripts')
-@author_required
-def script_editor():
-    """Script editor page (authors and admins only)"""
-    return render_template('script_editor.html')
-
 @main_bp.route('/dev-dashboard')
 def dev_dashboard():
     """Local development dashboard - shows server status, errors, and connected clients"""

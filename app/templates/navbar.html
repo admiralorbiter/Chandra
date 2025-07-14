@@ -13,13 +13,7 @@
                     <a class="nav-link" href="/lessons">Lessons</a>
                 </li>
                 {% if session.user_role in ['admin', 'author'] %}
-                <li class="nav-item">
-                    <a class="nav-link" href="/scripts">Script Editor</a>
-                </li>
                 {% endif %}
-                <li class="nav-item">
-                    <a class="nav-link" href="/lesson-player">Gesture Demo</a>
-                </li>
                 {% if session.user_role in ['admin', 'author'] %}
                 <li class="nav-item">
                     <a class="nav-link" href="/analytics/dashboard">
