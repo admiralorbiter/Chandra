@@ -28,8 +28,16 @@ class LessonPlayer {
     constructor() {
         this.webcamManager = new WebcamManager();
         this.gestureEngine = new GestureEngine();
-        this.socket = null;
-        this.isConnected = false;
+        
+        // Use connection manager instead of direct socket
+        this.connectionManager = new ConnectionManager({
+            maxReconnectAttempts: 10,
+            reconnectDelay: 1000,
+            maxReconnectDelay: 30000,
+            connectionTimeout: 5000,
+            heartbeatTimeout: 30000
+        });
+        
         this.isDetectionActive = false;
         this.debugMode = false;
         this.gestureHistory = [];
@@ -38,12 +46,13 @@ class LessonPlayer {
         this.lastFingerCount = null;
         this.runningTotalSpan = document.getElementById('runningTotal');
         this.lessonStartTime = Date.now();
+        
         // DOM elements
         this.video = document.getElementById('video');
         this.canvas = document.getElementById('canvas');
         this.startBtn = document.getElementById('startBtn');
         this.stopBtn = document.getElementById('stopBtn');
-        this.debugBtn = document.getElementById('debugBtn'); // (optional: can remove if using dev tools)
+        this.debugBtn = document.getElementById('debugBtn');
         this.gestureName = document.getElementById('gestureName');
         this.confidenceFill = document.getElementById('confidenceFill');
         this.confidenceText = document.getElementById('confidenceText');
@@ -56,12 +65,68 @@ class LessonPlayer {
         this.errorContainer = document.getElementById('errorContainer');
         this.loadingSpinner = document.getElementById('loadingSpinner');
         this.mainContent = document.getElementById('mainContent');
-        // New: container for dev tools
+        
+        // Dev tools container
         this.devToolsContainer = document.createElement('div');
         this.devToolsContainer.className = 'text-center mt-3';
+        
+        // Setup connection manager listeners
+        this.setupConnectionListeners();
+        
+        // Setup error boundary
+        this.setupErrorBoundary();
         // Move controls outside of .video-container for visibility
         this.video.parentNode.parentNode.appendChild(this.devToolsContainer);
         this.initialize();
+    }
+
+    /**
+     * Setup connection manager listeners
+     */
+    setupConnectionListeners() {
+        this.connectionManager.onConnectionChange((status) => {
+            console.log('Connection status changed:', status);
+            this.updateConnectionStatus(status);
+            
+            if (status === 'connected') {
+                // Re-enable detection if it was active
+                if (this.isDetectionActive) {
+                    this.lessonStatus.textContent = 'Detection active - show your hand!';
+                }
+            } else if (status === 'disconnected') {
+                // Pause detection if connection lost
+                if (this.isDetectionActive) {
+                    this.lessonStatus.textContent = 'Connection lost - detection paused';
+                }
+            }
+        });
+
+        this.connectionManager.onError((error) => {
+            console.error('Connection error:', error);
+            this.showError('Connection error: ' + error.message);
+        });
+    }
+
+    /**
+     * Setup error boundary
+     */
+    setupErrorBoundary() {
+        // Wrap critical methods with error boundary
+        this.initialize = window.errorBoundary.wrapAsyncFunction(this.initialize.bind(this), {
+            context: 'lesson_player_initialize'
+        });
+        
+        this.handleGestureDetected = window.errorBoundary.wrapFunction(this.handleGestureDetected.bind(this), {
+            context: 'lesson_player_gesture'
+        });
+        
+        this.startDetection = window.errorBoundary.wrapFunction(this.startDetection.bind(this), {
+            context: 'lesson_player_start'
+        });
+        
+        this.stopDetection = window.errorBoundary.wrapFunction(this.stopDetection.bind(this), {
+            context: 'lesson_player_stop'
+        });
     }
 
     /**
@@ -82,16 +147,22 @@ class LessonPlayer {
                     return;
                 }
             }
-            // Initialize WebSocket connection
-            await this.initializeWebSocket();
+            
+            // Initialize connection manager
+            await this.connectionManager.connect();
+            
             // Initialize webcam
             await this.initializeWebcam();
+            
             // Initialize gesture engine
             await this.initializeGestureEngine();
+            
             // Set up event listeners
             this.setupEventListeners();
+            
             // Attach dev tools after gesture engine is ready
             attachGestureDevTools(this.gestureEngine, { container: this.devToolsContainer });
+            
             // Hide loading and show main content
             this.hideLoading();
             this.showMainContent();
@@ -103,44 +174,12 @@ class LessonPlayer {
     }
 
     /**
-     * Initialize WebSocket connection
+     * Initialize WebSocket connection (legacy method - now handled by connection manager)
      */
     async initializeWebSocket() {
-        return new Promise((resolve, reject) => {
-            try {
-                this.socket = io();
-                
-                this.socket.on('connect', () => {
-                    console.log('Connected to server');
-                    this.isConnected = true;
-                    this.updateConnectionStatus('connected');
-                    resolve();
-                });
-                
-                this.socket.on('disconnect', () => {
-                    console.log('Disconnected from server');
-                    this.isConnected = false;
-                    this.updateConnectionStatus('disconnected');
-                });
-                
-                this.socket.on('gesture_echo', (data) => {
-                    console.log('Gesture echo received:', data);
-                });
-                
-                this.socket.on('gesture_broadcast', (data) => {
-                    console.log('Gesture broadcast received:', data);
-                });
-                
-                this.socket.on('connect_error', (error) => {
-                    console.error('WebSocket connection error:', error);
-                    this.updateConnectionStatus('disconnected');
-                    reject(error);
-                });
-                
-            } catch (error) {
-                reject(error);
-            }
-        });
+        // This method is now deprecated - connection is handled by ConnectionManager
+        console.warn('initializeWebSocket is deprecated - use connectionManager.connect() instead');
+        return this.connectionManager.connect();
     }
 
     /**
@@ -197,7 +236,7 @@ class LessonPlayer {
      * Start gesture detection
      */
     startDetection() {
-        if (!this.isConnected) {
+        if (!this.connectionManager.isConnected && !this.connectionManager.offlineMode) {
             this.showError('Not connected to server');
             return;
         }
@@ -258,9 +297,9 @@ class LessonPlayer {
         // Add to history
         this.addToHistory(gestureEvent);
         
-        // Send to server via WebSocket
-        if (this.isConnected) {
-            this.socket.emit('gesture', gestureEvent);
+        // Send to server via connection manager
+        if (this.connectionManager.isConnected || this.connectionManager.offlineMode) {
+            this.connectionManager.emit('gesture', gestureEvent);
             
             // Send analytics event
             this.sendAnalyticsEvent('gesture', gestureEvent);
@@ -391,10 +430,18 @@ class LessonPlayer {
         const statusTexts = {
             'connected': 'Connected',
             'disconnected': 'Disconnected',
-            'connecting': 'Connecting...'
+            'connecting': 'Connecting...',
+            'reconnecting': 'Reconnecting...'
         };
         
         this.connectionText.textContent = statusTexts[status] || 'Unknown';
+        
+        // Update lesson status based on connection
+        if (status === 'disconnected' && this.isDetectionActive) {
+            this.lessonStatus.textContent = 'Connection lost - detection paused';
+        } else if (status === 'connected' && this.isDetectionActive) {
+            this.lessonStatus.textContent = 'Detection active - show your hand!';
+        }
     }
 
     /**

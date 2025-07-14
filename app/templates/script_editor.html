@@ -16,6 +16,10 @@
     <!-- Socket.IO -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     
+    <!-- Chandra Robustness Scripts -->
+    <script src="{{ url_for('static', filename='js/connection-manager.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/error-boundary.js') }}"></script>
+    
     <style>
         .editor-container {
             height: 600px;
@@ -283,13 +287,13 @@
         // Global variables
         let currentScriptId = null;
         let editor = null;
-        let socket = null;
+        let connectionManager = null;
         let selectedTemplate = 'basic';
         
         // Initialize the editor
         document.addEventListener('DOMContentLoaded', function() {
             initializeEditor();
-            initializeWebSocket();
+            initializeConnectionManager();
             loadScripts();
             loadTemplates();
         });
@@ -310,35 +314,85 @@
             });
         }
         
-        function initializeWebSocket() {
-            socket = io();
-            
-            socket.on('connect', () => {
-                console.log('Connected to server');
+        function initializeConnectionManager() {
+            connectionManager = new ConnectionManager({
+                maxReconnectAttempts: 10,
+                reconnectDelay: 1000,
+                maxReconnectDelay: 30000,
+                connectionTimeout: 5000,
+                heartbeatTimeout: 30000
             });
             
-            socket.on('script_gesture_processed', (data) => {
+            connectionManager.onConnectionChange((status) => {
+                console.log('Connection status:', status);
+                updateConnectionStatus(status);
+            });
+            
+            connectionManager.onError((error) => {
+                console.error('Connection error:', error);
+                showNotification('Connection error: ' + error.message, 'error');
+            });
+            
+            // Connect to server
+            connectionManager.connect();
+            
+            // Setup script event listeners
+            setupScriptEventListeners();
+        }
+        
+        function setupScriptEventListeners() {
+            // Listen for script events
+            connectionManager.socket.on('script_gesture_processed', (data) => {
                 console.log('Gesture processed:', data);
             });
             
-            socket.on('script_started', (data) => {
+            connectionManager.socket.on('script_started', (data) => {
                 console.log('Script started:', data);
                 if (data.success) {
                     updateScriptState();
                 }
             });
             
-            socket.on('script_stopped', (data) => {
+            connectionManager.socket.on('script_stopped', (data) => {
                 console.log('Script stopped:', data);
                 if (data.success) {
                     updateScriptState();
                 }
             });
             
-            socket.on('script_state', (data) => {
+            connectionManager.socket.on('script_state', (data) => {
                 console.log('Script state:', data);
                 updateScriptStateDisplay(data.state);
             });
+        }
+        
+        function updateConnectionStatus(status) {
+            // Update connection status in UI if needed
+            const statusElements = document.querySelectorAll('.connection-status');
+            statusElements.forEach(element => {
+                element.className = `connection-status status-${status}`;
+            });
+        }
+        
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type} alert-dismissible fade show`;
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            // Add to page
+            const container = document.querySelector('.container') || document.body;
+            container.insertBefore(notification, container.firstChild);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
         }
         
         function loadScripts() {
@@ -507,7 +561,7 @@
                 return;
             }
             
-            socket.emit('script_start', { script_id: currentScriptId });
+            connectionManager.emit('script_start', { script_id: currentScriptId });
         }
         
         function stopScript() {
@@ -516,13 +570,13 @@
                 return;
             }
             
-            socket.emit('script_stop', { script_id: currentScriptId });
+            connectionManager.emit('script_stop', { script_id: currentScriptId });
         }
         
         function updateScriptState() {
             if (!currentScriptId) return;
             
-            socket.emit('get_script_state', { script_id: currentScriptId });
+            connectionManager.emit('get_script_state', { script_id: currentScriptId });
         }
         
         function updateScriptStateDisplay(state) {

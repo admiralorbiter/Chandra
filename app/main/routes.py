@@ -10,6 +10,7 @@ from app.auth.decorators import login_required, author_required
 import psutil
 import time
 from datetime import datetime, timedelta
+import logging
 
 # Global variables for tracking
 connected_clients = set()
@@ -138,6 +139,44 @@ def api_status():
         'version': '1.0.0',
         'name': 'Chandra Interactive Education Engine'
     })
+
+@main_bp.route('/api/errors', methods=['POST'])
+def report_error():
+    """Report frontend errors for monitoring and debugging"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
+        
+        # Extract error information
+        error_report = {
+            'message': data.get('message', 'Unknown error'),
+            'stack': data.get('stack', ''),
+            'name': data.get('name', 'Error'),
+            'timestamp': data.get('timestamp', datetime.utcnow().isoformat()),
+            'user_agent': data.get('userAgent', ''),
+            'url': data.get('url', ''),
+            'context': data.get('context', {}),
+            'session_id': data.get('sessionId', ''),
+            'user_id': data.get('userId')
+        }
+        
+        # Log the error
+        logging.error(f"Frontend error: {error_report['message']}", extra={
+            'error_report': error_report,
+            'session_id': error_report['session_id'],
+            'user_id': error_report['user_id']
+        })
+        
+        # Store in database if needed (optional)
+        # You could create an ErrorLog model and store errors for analysis
+        
+        return jsonify({'success': True, 'message': 'Error reported successfully'})
+        
+    except Exception as e:
+        logging.error(f"Error reporting frontend error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 # Utility functions for tracking
 def add_connected_client(client_id):
