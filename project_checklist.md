@@ -74,15 +74,15 @@
 ---
 
 ## 3 · Analytics & Progress Tracking
-- [ ] **Database Tables**
-  - [ ] `progress` (user × lesson)
-  - [ ] `event_logs` (JSON, ts index)
-- [ ] **Collector Service**
-  - [ ] Emit logs from orchestrator
-  - [ ] Batch inserts / async queue
-- [ ] **Simple Charts**
-  - [ ] Matplotlib PNG endpoint for lesson completion timeline
-  - [ ] Embed chart on admin dashboard
+- [x] **Database Tables**
+  - [x] `progress` (user × lesson)
+  - [x] `event_logs` (JSON, ts index)
+- [x] **Collector Service**
+  - [x] Emit logs from orchestrator
+  - [x] Batch inserts / async queue
+- [x] **Simple Charts**
+  - [x] Matplotlib PNG endpoint for lesson completion timeline
+  - [x] Embed chart on admin dashboard
 
 ---
 

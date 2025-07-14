@@ -9,6 +9,7 @@ from flask import jsonify, request, current_app
 from flask_socketio import emit
 from . import scripts_bp
 from .manager import ScriptManager
+from app.analytics.collector import log_script_event, update_lesson_progress
 
 # Global script manager instance
 script_manager = None
@@ -337,11 +338,24 @@ def get_templates():
     })
 
 # WebSocket event handlers for real-time script interaction
-def handle_gesture_event(script_id, gesture_data):
+def handle_gesture_event(script_id, gesture_data, session_id=None, user_id=None):
     """Handle gesture events from WebSocket"""
     try:
         manager = get_script_manager()
         manager.handle_gesture(script_id, gesture_data)
+        
+        # Log gesture event for analytics
+        log_script_event(
+            event_type='gesture',
+            session_id=session_id or 'unknown',
+            script_id=script_id,
+            user_id=user_id,
+            data={
+                'gesture_type': gesture_data.get('gesture'),
+                'confidence': gesture_data.get('confidence'),
+                'landmarks': gesture_data.get('landmarks')
+            }
+        )
     except Exception as e:
         logging.error(f"Error handling gesture for script {script_id}: {e}")
 
@@ -361,9 +375,11 @@ def register_socketio_handlers(socketio):
         """Handle gesture events for scripts via WebSocket"""
         script_id = data.get('script_id')
         gesture_data = data.get('gesture_data', {})
+        session_id = data.get('session_id')
+        user_id = data.get('user_id')
         
         if script_id:
-            handle_gesture_event(script_id, gesture_data)
+            handle_gesture_event(script_id, gesture_data, session_id, user_id)
             emit('script_gesture_processed', {
                 'script_id': script_id,
                 'success': True
@@ -378,11 +394,23 @@ def register_socketio_handlers(socketio):
     def on_script_start(data):
         """Handle script start events via WebSocket"""
         script_id = data.get('script_id')
+        session_id = data.get('session_id')
+        user_id = data.get('user_id')
         
         if script_id:
             try:
                 manager = get_script_manager()
                 success = manager.start_script(script_id)
+                
+                # Log script start event
+                if success:
+                    log_script_event(
+                        event_type='lesson_start',
+                        session_id=session_id or 'unknown',
+                        script_id=script_id,
+                        user_id=user_id,
+                        data={'status': 'started'}
+                    )
                 
                 emit('script_started', {
                     'script_id': script_id,
@@ -404,11 +432,35 @@ def register_socketio_handlers(socketio):
     def on_script_stop(data):
         """Handle script stop events via WebSocket"""
         script_id = data.get('script_id')
+        session_id = data.get('session_id')
+        user_id = data.get('user_id')
+        completion_data = data.get('completion_data', {})
         
         if script_id:
             try:
                 manager = get_script_manager()
                 success = manager.stop_script(script_id)
+                
+                # Log script stop event
+                if success:
+                    log_script_event(
+                        event_type='lesson_complete',
+                        session_id=session_id or 'unknown',
+                        script_id=script_id,
+                        user_id=user_id,
+                        data=completion_data
+                    )
+                    
+                    # Update progress if user_id is provided
+                    if user_id and completion_data:
+                        update_lesson_progress(
+                            user_id=user_id,
+                            lesson_id=script_id,
+                            completed=completion_data.get('completed', False),
+                            score=completion_data.get('score', 0),
+                            attempts=completion_data.get('attempts', 1),
+                            time_spent=completion_data.get('time_spent', 0)
+                        )
                 
                 emit('script_stopped', {
                     'script_id': script_id,

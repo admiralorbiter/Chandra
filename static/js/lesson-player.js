@@ -34,6 +34,7 @@ class LessonPlayer {
         this.runningTotal = 0;
         this.lastFingerCount = null;
         this.runningTotalSpan = document.getElementById('runningTotal');
+        this.lessonStartTime = Date.now();
         
         // DOM elements
         this.video = document.getElementById('video');
@@ -198,6 +199,13 @@ class LessonPlayer {
             this.startBtn.disabled = true;
             this.stopBtn.disabled = false;
             this.lessonStatus.textContent = 'Detection active - show your hand!';
+            
+            // Send lesson start analytics
+            this.sendAnalyticsEvent('lesson_start', {
+                timestamp: new Date().toISOString(),
+                lesson_id: typeof LESSON_ID !== 'undefined' ? LESSON_ID : 'unknown'
+            });
+            
             console.log('Gesture detection started');
         } else {
             this.showError('Failed to start gesture detection');
@@ -245,6 +253,9 @@ class LessonPlayer {
         // Send to server via WebSocket
         if (this.isConnected) {
             this.socket.emit('gesture', gestureEvent);
+            
+            // Send analytics event
+            this.sendAnalyticsEvent('gesture', gestureEvent);
         }
         
         // Update lesson progress
@@ -350,6 +361,14 @@ class LessonPlayer {
         if (progress >= 100) {
             this.lessonStatus.textContent = 'Lesson completed! Great job!';
             this.lessonStatus.style.color = '#28a745';
+            
+            // Send lesson completion analytics
+            this.sendLessonCompletion({
+                completed: true,
+                score: progress,
+                attempts: 1,
+                timeSpent: Math.floor((Date.now() - this.lessonStartTime) / 1000)
+            });
         } else {
             this.lessonStatus.textContent = `Progress: ${Math.round(progress)}% - Keep trying different gestures!`;
         }
@@ -400,6 +419,71 @@ class LessonPlayer {
      */
     showMainContent() {
         this.mainContent.style.display = 'block';
+    }
+
+    /**
+     * Send analytics event
+     */
+    sendAnalyticsEvent(eventType, data) {
+        const analyticsData = {
+            event_type: eventType,
+            session_id: this.getSessionId(),
+            user_id: this.getUserId(),
+            lesson_id: typeof LESSON_ID !== 'undefined' ? LESSON_ID : 'unknown',
+            data: data
+        };
+
+        fetch('/analytics/events', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(analyticsData)
+        }).catch(error => {
+            console.error('Failed to send analytics event:', error);
+        });
+    }
+
+    /**
+     * Get session ID
+     */
+    getSessionId() {
+        if (!this._sessionId) {
+            this._sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+        return this._sessionId;
+    }
+
+    /**
+     * Get user ID (placeholder - would be set from authentication)
+     */
+    getUserId() {
+        // In a real implementation, this would come from user authentication
+        return null; // or session.user_id if available
+    }
+
+    /**
+     * Send lesson completion data
+     */
+    sendLessonCompletion(completionData) {
+        const progressData = {
+            user_id: this.getUserId(),
+            lesson_id: typeof LESSON_ID !== 'undefined' ? LESSON_ID : 'unknown',
+            completed: completionData.completed || false,
+            score: completionData.score || 0,
+            attempts: completionData.attempts || 1,
+            time_spent: completionData.timeSpent || 0
+        };
+
+        fetch('/analytics/progress', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(progressData)
+        }).catch(error => {
+            console.error('Failed to send progress data:', error);
+        });
     }
 }
 

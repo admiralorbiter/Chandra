@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chandra Analytics Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .chart-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .metric-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+        }
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        .chart-img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .error {
+            color: #dc3545;
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    {% include 'navbar.html' %}
+    
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="mb-4">
+                    <i class="fas fa-chart-line"></i> Analytics Dashboard
+                </h1>
+            </div>
+        </div>
+
+        <!-- Metrics Overview -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-value" id="total-users">-</div>
+                    <div class="metric-label">Total Users</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-value" id="total-lessons">-</div>
+                    <div class="metric-label">Total Lessons</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-value" id="recent-activity">-</div>
+                    <div class="metric-label">Recent Activity (24h)</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-value" id="popular-lesson">-</div>
+                    <div class="metric-label">Most Popular Lesson</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="row">
+            <!-- Dashboard Overview Chart -->
+            <div class="col-12 mb-4">
+                <div class="chart-container">
+                    <h3><i class="fas fa-chart-pie"></i> Dashboard Overview</h3>
+                    <div id="dashboard-chart" class="loading">
+                        <i class="fas fa-spinner fa-spin"></i> Loading dashboard chart...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lesson Analytics -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="chart-container">
+                    <h3><i class="fas fa-chart-bar"></i> Lesson Analytics</h3>
+                    <div class="mb-3">
+                        <label for="lesson-select" class="form-label">Select Lesson:</label>
+                        <select class="form-select" id="lesson-select">
+                            <option value="">Loading lessons...</option>
+                        </select>
+                    </div>
+                    <div id="lesson-chart" class="loading">
+                        <i class="fas fa-spinner fa-spin"></i> Select a lesson to view analytics...
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="chart-container">
+                    <h3><i class="fas fa-user-chart"></i> User Progress</h3>
+                    <div class="mb-3">
+                        <label for="user-select" class="form-label">Select User ID:</label>
+                        <input type="number" class="form-control" id="user-select" placeholder="Enter user ID">
+                        <button class="btn btn-primary mt-2" onclick="loadUserProgress()">
+                            <i class="fas fa-search"></i> Load Progress
+                        </button>
+                    </div>
+                    <div id="user-chart" class="loading">
+                        <i class="fas fa-spinner fa-spin"></i> Enter a user ID to view progress...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Events Table -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="chart-container">
+                    <h3><i class="fas fa-list"></i> Recent Events</h3>
+                    <div class="table-responsive">
+                        <table class="table table-striped" id="events-table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Event Type</th>
+                                    <th>Lesson</th>
+                                    <th>User ID</th>
+                                    <th>Session ID</th>
+                                </tr>
+                            </thead>
+                            <tbody id="events-tbody">
+                                <tr>
+                                    <td colspan="5" class="text-center">Loading events...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global variables
+        let availableLessons = [];
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboardData();
+            loadAvailableLessons();
+            loadRecentEvents();
+        });
+
+        // Load dashboard metrics and chart
+        async function loadDashboardData() {
+            try {
+                const response = await fetch('/analytics/dashboard/data');
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateMetrics(data.data);
+                    loadDashboardChart();
+                } else {
+                    console.error('Failed to load dashboard data:', data.error);
+                }
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+            }
+        }
+
+        // Update metrics display
+        function updateMetrics(data) {
+            document.getElementById('total-users').textContent = data.total_users || 0;
+            document.getElementById('total-lessons').textContent = data.total_lessons || 0;
+            document.getElementById('recent-activity').textContent = data.recent_activity || 0;
+            
+            if (data.popular_lessons && data.popular_lessons.length > 0) {
+                document.getElementById('popular-lesson').textContent = data.popular_lessons[0].id;
+            } else {
+                document.getElementById('popular-lesson').textContent = 'N/A';
+            }
+        }
+
+        // Load dashboard overview chart
+        async function loadDashboardChart() {
+            const chartContainer = document.getElementById('dashboard-chart');
+            chartContainer.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading chart...';
+            
+            try {
+                const response = await fetch('/analytics/charts/dashboard/overview');
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const imageUrl = URL.createObjectURL(blob);
+                    chartContainer.innerHTML = `<img src="${imageUrl}" class="chart-img" alt="Dashboard Overview">`;
+                } else {
+                    chartContainer.innerHTML = '<div class="error">Failed to load chart</div>';
+                }
+            } catch (error) {
+                chartContainer.innerHTML = '<div class="error">Error loading chart</div>';
+                console.error('Error loading dashboard chart:', error);
+            }
+        }
+
+        // Load available lessons
+        async function loadAvailableLessons() {
+            try {
+                const response = await fetch('/scripts/');
+                const data = await response.json();
+                
+                if (data.success) {
+                    availableLessons = data.scripts;
+                    const select = document.getElementById('lesson-select');
+                    select.innerHTML = '<option value="">Select a lesson...</option>';
+                    
+                    availableLessons.forEach(script => {
+                        const option = document.createElement('option');
+                        option.value = script.id;
+                        option.textContent = script.name || script.id;
+                        select.appendChild(option);
+                    });
+                    
+                    // Add change event listener
+                    select.addEventListener('change', function() {
+                        if (this.value) {
+                            loadLessonChart(this.value);
+                        } else {
+                            document.getElementById('lesson-chart').innerHTML = 
+                                '<div class="loading">Select a lesson to view analytics...</div>';
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading lessons:', error);
+            }
+        }
+
+        // Load lesson analytics chart
+        async function loadLessonChart(lessonId) {
+            const chartContainer = document.getElementById('lesson-chart');
+            chartContainer.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading lesson chart...';
+            
+            try {
+                const response = await fetch(`/analytics/charts/lesson/${lessonId}/timeline?days=30`);
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const imageUrl = URL.createObjectURL(blob);
+                    chartContainer.innerHTML = `<img src="${imageUrl}" class="chart-img" alt="Lesson Timeline">`;
+                } else {
+                    chartContainer.innerHTML = '<div class="error">Failed to load lesson chart</div>';
+                }
+            } catch (error) {
+                chartContainer.innerHTML = '<div class="error">Error loading lesson chart</div>';
+                console.error('Error loading lesson chart:', error);
+            }
+        }
+
+        // Load user progress chart
+        async function loadUserProgress() {
+            const userId = document.getElementById('user-select').value;
+            if (!userId) {
+                alert('Please enter a user ID');
+                return;
+            }
+            
+            const chartContainer = document.getElementById('user-chart');
+            chartContainer.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading user progress...';
+            
+            try {
+                const response = await fetch(`/analytics/charts/user/${userId}/progress`);
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const imageUrl = URL.createObjectURL(blob);
+                    chartContainer.innerHTML = `<img src="${imageUrl}" class="chart-img" alt="User Progress">`;
+                } else {
+                    chartContainer.innerHTML = '<div class="error">Failed to load user progress chart</div>';
+                }
+            } catch (error) {
+                chartContainer.innerHTML = '<div class="error">Error loading user progress chart</div>';
+                console.error('Error loading user progress chart:', error);
+            }
+        }
+
+        // Load recent events
+        async function loadRecentEvents() {
+            const tbody = document.getElementById('events-tbody');
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center">Loading events...</td></tr>';
+            
+            try {
+                // For now, we'll show a placeholder since we don't have a recent events endpoint
+                // In a real implementation, you'd fetch from /analytics/events/recent
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">
+                            <i class="fas fa-info-circle"></i> 
+                            Recent events will be displayed here when available
+                        </td>
+                    </tr>
+                `;
+            } catch (error) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error loading events</td></tr>';
+                console.error('Error loading events:', error);
+            }
+        }
+
+        // Auto-refresh dashboard every 30 seconds
+        setInterval(loadDashboardData, 30000);
+    </script>
+</body>
+</html> 
