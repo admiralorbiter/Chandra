@@ -148,18 +148,23 @@ class GestureEngine {
             
             if (predictions.length > 0) {
                 const hand = predictions[0];
+                // Store last landmarks for recorder
+                this.lastLandmarks = hand.landmarks;
+                const gesture = this.analyzeGesture(hand);
+                // Store last gesture for overlay
+                this.lastGesture = gesture;
                 if (this.debugMode) {
-                    this.drawLandmarks(hand.landmarks);
+                    this.drawLandmarks(hand.landmarks, gesture);
                 } else if (this.ctx) {
                     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
                 }
-                const gesture = this.analyzeGesture(hand);
-                
                 if (gesture && gesture.confidence > this.confidenceThreshold) {
                     this.handleGestureDetected(gesture);
                 }
             } else if (this.ctx) {
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.lastLandmarks = null;
+                this.lastGesture = null;
             }
 
             // Continue detection loop
@@ -302,15 +307,13 @@ class GestureEngine {
     }
 
     /**
-     * Draw hand landmarks on canvas for debugging
+     * Draw hand landmarks and gesture info on canvas for debugging
      */
-    drawLandmarks(landmarks) {
+    drawLandmarks(landmarks, gesture = null) {
         if (!this.ctx) return;
-        
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.ctx.strokeStyle = '#00FF00';
         this.ctx.lineWidth = 2;
-        
         // Draw connections between landmarks
         const connections = [
             [0, 1], [1, 2], [2, 3], [3, 4], // thumb
@@ -321,17 +324,14 @@ class GestureEngine {
             [0, 5], [5, 9], [9, 13], [13, 17], // palm connections
             [0, 17] // palm base
         ];
-        
         connections.forEach(([start, end]) => {
             const startPoint = landmarks[start];
             const endPoint = landmarks[end];
-            
             this.ctx.beginPath();
             this.ctx.moveTo(startPoint[0], startPoint[1]);
             this.ctx.lineTo(endPoint[0], endPoint[1]);
             this.ctx.stroke();
         });
-        
         // Draw landmark points
         landmarks.forEach(landmark => {
             this.ctx.fillStyle = '#FF0000';
@@ -339,6 +339,28 @@ class GestureEngine {
             this.ctx.arc(landmark[0], landmark[1], 3, 0, 2 * Math.PI);
             this.ctx.fill();
         });
+        // Draw gesture info (name, confidence, finger count, FPS)
+        let y = 40;
+        if (gesture && gesture.name) {
+            this.ctx.font = '20px Arial';
+            this.ctx.fillStyle = '#2222FF';
+            const text = `${gesture.name.replace('_', ' ').toUpperCase()} (${Math.round(gesture.confidence * 100)}%)`;
+            this.ctx.fillText(text, 20, y);
+            y += 28;
+        }
+        if (gesture && typeof gesture.fingerCount !== 'undefined') {
+            this.ctx.font = '18px Arial';
+            this.ctx.fillStyle = '#007bff';
+            this.ctx.fillText(`Fingers: ${gesture.fingerCount}`, 20, y);
+            y += 24;
+        }
+        // Show FPS
+        if (this.lastFrameTime && this.frameInterval) {
+            const fps = Math.round(1000 / this.frameInterval);
+            this.ctx.font = '16px Arial';
+            this.ctx.fillStyle = '#28a745';
+            this.ctx.fillText(`FPS: ${fps}`, 20, y);
+        }
     }
 }
 

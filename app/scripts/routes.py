@@ -373,6 +373,27 @@ def handle_script_tick():
 def register_socketio_handlers(socketio):
     """Register WebSocket event handlers with the socketio instance"""
     
+    # Import dev dashboard tracking functions
+    from app.main.routes import add_connected_client, remove_connected_client, log_error
+    
+    # Track connections using a simple counter for now
+    connection_count = 0
+    
+    @socketio.on('connect')
+    def on_connect():
+        """Handle client connection"""
+        nonlocal connection_count
+        connection_count += 1
+        add_connected_client(f"client_{connection_count}")
+        print(f"Client connected: {connection_count}")
+    
+    @socketio.on('disconnect')
+    def on_disconnect():
+        """Handle client disconnection"""
+        nonlocal connection_count
+        connection_count = max(0, connection_count - 1)
+        print(f"Client disconnected. Active connections: {connection_count}")
+    
     @socketio.on('script_gesture')
     def on_script_gesture(data):
         """Handle gesture events for scripts via WebSocket"""
@@ -382,11 +403,19 @@ def register_socketio_handlers(socketio):
         user_id = data.get('user_id')
         
         if script_id:
-            handle_gesture_event(script_id, gesture_data, session_id, user_id)
-            emit('script_gesture_processed', {
-                'script_id': script_id,
-                'success': True
-            })
+            try:
+                handle_gesture_event(script_id, gesture_data, session_id, user_id)
+                emit('script_gesture_processed', {
+                    'script_id': script_id,
+                    'success': True
+                })
+            except Exception as e:
+                log_error(f"Gesture processing error for script {script_id}: {str(e)}")
+                emit('script_gesture_processed', {
+                    'script_id': script_id,
+                    'success': False,
+                    'error': str(e)
+                })
         else:
             emit('script_gesture_processed', {
                 'success': False,
@@ -420,6 +449,7 @@ def register_socketio_handlers(socketio):
                     'success': success
                 })
             except Exception as e:
+                log_error(f"Script start error for {script_id}: {str(e)}")
                 emit('script_started', {
                     'script_id': script_id,
                     'success': False,
@@ -470,6 +500,7 @@ def register_socketio_handlers(socketio):
                     'success': success
                 })
             except Exception as e:
+                log_error(f"Script stop error for {script_id}: {str(e)}")
                 emit('script_stopped', {
                     'script_id': script_id,
                     'success': False,
@@ -496,6 +527,7 @@ def register_socketio_handlers(socketio):
                     'state': state
                 })
             except Exception as e:
+                log_error(f"Script state error for {script_id}: {str(e)}")
                 emit('script_state', {
                     'script_id': script_id,
                     'error': str(e)

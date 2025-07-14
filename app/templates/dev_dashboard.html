@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chandra Dev Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .metric-card {
+            transition: all 0.3s ease;
+            border-left: 4px solid #007bff;
+        }
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .error-card {
+            border-left: 4px solid #dc3545;
+        }
+        .warning-card {
+            border-left: 4px solid #ffc107;
+        }
+        .success-card {
+            border-left: 4px solid #28a745;
+        }
+        .progress-thin {
+            height: 6px;
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-online {
+            background-color: #28a745;
+        }
+        .status-offline {
+            background-color: #dc3545;
+        }
+        .status-warning {
+            background-color: #ffc107;
+        }
+        .refresh-btn {
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .refresh-btn:hover {
+            transform: rotate(180deg);
+        }
+        .error-item {
+            border-left: 3px solid #dc3545;
+            padding-left: 15px;
+            margin-bottom: 10px;
+        }
+        .client-item {
+            background: #f8f9fa;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        .script-item {
+            background: #e3f2fd;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 8px;
+        }
+        .uptime-display {
+            font-family: monospace;
+            font-size: 1.1em;
+            color: #495057;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="row bg-white shadow-sm py-3 mb-4">
+            <div class="col">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="h3 mb-0">
+                            <i class="bi bi-speedometer2 text-primary"></i>
+                            Chandra Dev Dashboard
+                        </h1>
+                        <small class="text-muted">Local Development Monitor</small>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <span class="status-indicator status-online" id="server-status"></span>
+                        <span class="me-3" id="server-status-text">Online</span>
+                        <button class="btn btn-outline-primary btn-sm" onclick="refreshData()">
+                            <i class="bi bi-arrow-clockwise refresh-btn"></i>
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Metrics Row -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card metric-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title text-muted">CPU Usage</h6>
+                                <h3 class="mb-0" id="cpu-usage">--</h3>
+                            </div>
+                            <div class="text-primary">
+                                <i class="bi bi-cpu fs-1"></i>
+                            </div>
+                        </div>
+                        <div class="progress progress-thin mt-2">
+                            <div class="progress-bar" id="cpu-progress" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <div class="card metric-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title text-muted">Memory Usage</h6>
+                                <h3 class="mb-0" id="memory-usage">--</h3>
+                                <small class="text-muted" id="memory-details">--</small>
+                            </div>
+                            <div class="text-info">
+                                <i class="bi bi-memory fs-1"></i>
+                            </div>
+                        </div>
+                        <div class="progress progress-thin mt-2">
+                            <div class="progress-bar bg-info" id="memory-progress" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <div class="card metric-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title text-muted">Disk Usage</h6>
+                                <h3 class="mb-0" id="disk-usage">--</h3>
+                                <small class="text-muted" id="disk-details">--</small>
+                            </div>
+                            <div class="text-warning">
+                                <i class="bi bi-hdd fs-1"></i>
+                            </div>
+                        </div>
+                        <div class="progress progress-thin mt-2">
+                            <div class="progress-bar bg-warning" id="disk-progress" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <div class="card metric-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title text-muted">Server Uptime</h6>
+                                <h3 class="mb-0 uptime-display" id="uptime">--</h3>
+                            </div>
+                            <div class="text-success">
+                                <i class="bi bi-clock-history fs-1"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Row -->
+        <div class="row">
+            <!-- Left Column -->
+            <div class="col-md-8">
+                <!-- Scripts Status -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-code-slash text-primary"></i>
+                            Script Engine Status
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <h4 id="total-scripts">--</h4>
+                                    <small class="text-muted">Total Scripts</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <h4 id="running-scripts">--</h4>
+                                    <small class="text-muted">Running Scripts</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <h4 id="connected-clients">--</h4>
+                                    <small class="text-muted">Connected Clients</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="running-scripts-list">
+                            <!-- Running scripts will be populated here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Errors -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-exclamation-triangle text-danger"></i>
+                            Recent Errors
+                            <span class="badge bg-danger ms-2" id="error-count">0</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="recent-errors-list">
+                            <!-- Errors will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="col-md-4">
+                <!-- Server Info -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-server text-secondary"></i>
+                            Server Information
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <strong>Environment:</strong>
+                            <span class="badge bg-primary" id="env-badge">--</span>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Debug Mode:</strong>
+                            <span class="badge" id="debug-badge">--</span>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Testing Mode:</strong>
+                            <span class="badge" id="testing-badge">--</span>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Static Folder:</strong>
+                            <small class="text-muted d-block" id="static-folder">--</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Connected Clients -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-people text-info"></i>
+                            Connected WebSocket Clients
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="connected-clients-list">
+                            <!-- Connected clients will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let refreshInterval;
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function formatUptime(seconds) {
+            const days = Math.floor(seconds / 86400);
+            const hours = Math.floor((seconds % 86400) / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            
+            if (days > 0) {
+                return `${days}d ${hours}h ${minutes}m`;
+            } else if (hours > 0) {
+                return `${hours}h ${minutes}m`;
+            } else if (minutes > 0) {
+                return `${minutes}m ${secs}s`;
+            } else {
+                return `${secs}s`;
+            }
+        }
+
+        function updateMetrics(data) {
+            // System metrics
+            document.getElementById('cpu-usage').textContent = data.system.cpu_percent.toFixed(1) + '%';
+            document.getElementById('cpu-progress').style.width = data.system.cpu_percent + '%';
+            
+            document.getElementById('memory-usage').textContent = data.system.memory_percent.toFixed(1) + '%';
+            document.getElementById('memory-details').textContent = 
+                formatBytes(data.system.memory_used) + ' / ' + formatBytes(data.system.memory_total);
+            document.getElementById('memory-progress').style.width = data.system.memory_percent + '%';
+            
+            document.getElementById('disk-usage').textContent = data.system.disk_percent.toFixed(1) + '%';
+            document.getElementById('disk-details').textContent = 
+                formatBytes(data.system.disk_used) + ' / ' + formatBytes(data.system.disk_total);
+            document.getElementById('disk-progress').style.width = data.system.disk_percent + '%';
+            
+            document.getElementById('uptime').textContent = data.server.uptime;
+            
+            // Script metrics
+            document.getElementById('total-scripts').textContent = data.scripts.total_scripts;
+            document.getElementById('running-scripts').textContent = data.scripts.running_count;
+            document.getElementById('connected-clients').textContent = data.server.connected_clients;
+            
+            // Server info
+            document.getElementById('env-badge').textContent = data.server.app_info.config_name;
+            document.getElementById('debug-badge').textContent = data.server.app_info.debug ? 'ON' : 'OFF';
+            document.getElementById('debug-badge').className = data.server.app_info.debug ? 'badge bg-success' : 'badge bg-secondary';
+            document.getElementById('testing-badge').textContent = data.server.app_info.testing ? 'ON' : 'OFF';
+            document.getElementById('testing-badge').className = data.server.app_info.testing ? 'badge bg-warning' : 'badge bg-secondary';
+            document.getElementById('static-folder').textContent = data.server.app_info.static_folder;
+            
+            // Update server status
+            const statusIndicator = document.getElementById('server-status');
+            const statusText = document.getElementById('server-status-text');
+            statusIndicator.className = 'status-indicator status-online';
+            statusText.textContent = 'Online';
+            
+            // Update error count
+            document.getElementById('error-count').textContent = data.errors.recent_count;
+            
+            // Update running scripts list
+            updateRunningScripts(data.scripts.running_scripts);
+            
+            // Update recent errors list
+            updateRecentErrors(data.errors.recent_errors);
+        }
+
+        function updateRunningScripts(scripts) {
+            const container = document.getElementById('running-scripts-list');
+            if (scripts.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center">No scripts currently running</p>';
+                return;
+            }
+            
+            container.innerHTML = scripts.map(script => `
+                <div class="script-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${script.id}</strong>
+                            <br><small class="text-muted">Running for ${formatUptime(Math.floor((Date.now() / 1000) - script.uptime))}</small>
+                        </div>
+                        <span class="badge bg-success">Running</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateRecentErrors(errors) {
+            const container = document.getElementById('recent-errors-list');
+            if (errors.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center">No recent errors</p>';
+                return;
+            }
+            
+            container.innerHTML = errors.map(error => `
+                <div class="error-item">
+                    <div class="d-flex justify-content-between">
+                        <strong class="text-danger">${error.type.toUpperCase()}</strong>
+                        <small class="text-muted">${error.time_ago}</small>
+                    </div>
+                    <p class="mb-0 mt-1">${error.message}</p>
+                </div>
+            `).join('');
+        }
+
+        async function refreshData() {
+            try {
+                const response = await fetch('/api/dev/status');
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateMetrics(data.data);
+                } else {
+                    console.error('Failed to fetch dev status:', data.error);
+                }
+            } catch (error) {
+                console.error('Error fetching dev status:', error);
+                // Update status to show offline
+                document.getElementById('server-status').className = 'status-indicator status-offline';
+                document.getElementById('server-status-text').textContent = 'Offline';
+            }
+        }
+
+        function startAutoRefresh() {
+            refreshInterval = setInterval(refreshData, 5000); // Refresh every 5 seconds
+        }
+
+        function stopAutoRefresh() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+        }
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshData();
+            startAutoRefresh();
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            stopAutoRefresh();
+        });
+    </script>
+</body>
+</html> 

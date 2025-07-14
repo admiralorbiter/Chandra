@@ -25,6 +25,7 @@ flake8==6.1.0
 # Analytics and monitoring
 matplotlib==3.8.2
 numpy>=1.26.0
+psutil==5.9.6
 
 # Script engine dependencies
 RestrictedPython>=7.0

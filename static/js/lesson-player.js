@@ -21,6 +21,9 @@
  * - Good lighting and a clear background improve detection accuracy.
  */
 
+// Import the reusable dev tools module
+import { attachGestureDevTools } from './gesture-dev-tools.js';
+
 class LessonPlayer {
     constructor() {
         this.webcamManager = new WebcamManager();
@@ -35,13 +38,12 @@ class LessonPlayer {
         this.lastFingerCount = null;
         this.runningTotalSpan = document.getElementById('runningTotal');
         this.lessonStartTime = Date.now();
-        
         // DOM elements
         this.video = document.getElementById('video');
         this.canvas = document.getElementById('canvas');
         this.startBtn = document.getElementById('startBtn');
         this.stopBtn = document.getElementById('stopBtn');
-        this.debugBtn = document.getElementById('debugBtn');
+        this.debugBtn = document.getElementById('debugBtn'); // (optional: can remove if using dev tools)
         this.gestureName = document.getElementById('gestureName');
         this.confidenceFill = document.getElementById('confidenceFill');
         this.confidenceText = document.getElementById('confidenceText');
@@ -54,7 +56,11 @@ class LessonPlayer {
         this.errorContainer = document.getElementById('errorContainer');
         this.loadingSpinner = document.getElementById('loadingSpinner');
         this.mainContent = document.getElementById('mainContent');
-        
+        // New: container for dev tools
+        this.devToolsContainer = document.createElement('div');
+        this.devToolsContainer.className = 'text-center mt-3';
+        // Move controls outside of .video-container for visibility
+        this.video.parentNode.parentNode.appendChild(this.devToolsContainer);
         this.initialize();
     }
 
@@ -84,6 +90,8 @@ class LessonPlayer {
             await this.initializeGestureEngine();
             // Set up event listeners
             this.setupEventListeners();
+            // Attach dev tools after gesture engine is ready
+            attachGestureDevTools(this.gestureEngine, { container: this.devToolsContainer });
             // Hide loading and show main content
             this.hideLoading();
             this.showMainContent();

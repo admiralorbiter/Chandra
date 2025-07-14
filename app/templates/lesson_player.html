@@ -188,6 +188,7 @@
                             <i class="fas fa-eye"></i> Toggle Debug
                         </button>
                     </div>
+                    <!-- Removed old gesture recorder controls here -->
                 </div>
                 
                 <!-- Gesture Display -->
@@ -237,7 +238,8 @@
     <!-- Chandra Scripts -->
     <script src="{{ url_for('static', filename='js/webcam-manager.js') }}"></script>
     <script src="{{ url_for('static', filename='js/gesture-engine.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/lesson-player.js') }}"></script>
+    <!-- Lesson Player JS (as module) -->
+    <script type="module" src="{{ url_for('static', filename='js/lesson-player.js') }}"></script>
     <script>
 // Pass script_id to JS
 const SCRIPT_ID = "{{ script_id|default('') }}";

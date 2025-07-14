@@ -105,9 +105,6 @@
   - [x] `eductl export --zip`
   - [x] `eductl validate <script>` - Validate script syntax
   - [x] `eductl info <script>` - Show script information
-- [ ] **Dockerization**
-  - [ ] `Dockerfile` (python:3.12‑slim, gunicorn + eventlet)
-  - [ ] `docker-compose.yml` with Postgres option
 - [ ] **Swagger / OpenAPI Spec**
   - [ ] Autogenerate with `flask-smorest`
 
@@ -115,8 +112,7 @@
 
 ## 6 · Stretch & Future‑Proofing
 - [ ] **GraphQL Facade (Graphene)**
-- [ ] **Postgres Migration Script**
-- [ ] **Admin Dashboard (React or HTMX)**
+- [ ] **Admin Dashboard (HTMX)**
 - [ ] **Plugin Loader Refactor**
   - [ ] Dynamic discovery via entry‑points
 - [ ] **AI Tutor Module (Listens on internal bus)**
@@ -146,15 +142,15 @@
 - [x] **Enhanced Logging & Debugging**
   - [x] Centralized logging (`loguru` or built-in logging)
   - [x] Real-time Flask logging UI
-- [ ] **Local Dev Dashboard**
-  - [ ] Server status, recent errors, connected WebSocket clients
+- [x] **Local Dev Dashboard**
+  - [x] Server status, recent errors, connected WebSocket clients
 
 ### 🎥 Gesture Engine Enhancements
-- [ ] **Gesture Debugging Overlay**
-  - [ ] Visualize landmarks on webcam feed
-  - [ ] Display recognized gestures/confidence scores
-- [ ] **Gesture Recorder**
-  - [ ] Capture videos/frames of gestures for debugging/training
+- [x] **Gesture Debugging Overlay**
+  - [x] Visualize landmarks on webcam feed
+  - [x] Display recognized gestures/confidence scores
+- [x] **Gesture Recorder**
+  - [x] Capture videos/frames of gestures for debugging/training
 
 ### 📡 Robustness & Error Handling
 - [ ] **Offline & Connectivity Handling**

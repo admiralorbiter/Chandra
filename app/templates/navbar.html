@@ -27,6 +27,13 @@
                     </a>
                 </li>
                 {% endif %}
+                {% if config.DEBUG %}
+                <li class="nav-item">
+                    <a class="nav-link" href="/dev-dashboard">
+                        <i class="fas fa-tachometer-alt"></i> Dev Dashboard
+                    </a>
+                </li>
+                {% endif %}
                 {% if session.user_role == 'admin' %}
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown">
