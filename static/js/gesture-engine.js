@@ -205,6 +205,14 @@ class GestureEngine {
             return { name: 'point', confidence: 0.8 };
         } else if (fingers.index && fingers.middle && !fingers.thumb && !fingers.ring && !fingers.pinky) {
             return { name: 'victory', confidence: 0.8 };
+        } else if (fingers.thumb && fingers.index && !fingers.middle && !fingers.ring && !fingers.pinky) {
+            // Check if thumb and index form a circle (OK gesture)
+            const thumbTip = landmarks[4];
+            const indexTip = landmarks[8];
+            const distance = this.distance(thumbTip, indexTip);
+            if (distance < 0.05) { // Close enough to form a circle
+                return { name: 'ok', confidence: 0.8 };
+            }
         }
         return { name: 'unknown', confidence: 0.5 };
     }
@@ -229,7 +237,20 @@ class GestureEngine {
     isFingerExtended(landmarks, fingerIndices) {
         if (fingerIndices.length < 3) return false;
         
-        // Simple heuristic: check if the tip is further from the base than the middle joint
+        // Special case for thumb (different anatomy)
+        if (fingerIndices[0] === 0) {
+            // Thumb extended if tip is further from wrist than middle joint
+            const wrist = landmarks[0];
+            const middle = landmarks[2];
+            const tip = landmarks[4];
+            
+            const wristToTip = this.distance(wrist, tip);
+            const wristToMiddle = this.distance(wrist, middle);
+            
+            return wristToTip > wristToMiddle * 1.1;
+        }
+        
+        // For other fingers: check if the tip is further from the base than the middle joint
         const base = landmarks[fingerIndices[0]];
         const middle = landmarks[fingerIndices[Math.floor(fingerIndices.length / 2)]];
         const tip = landmarks[fingerIndices[fingerIndices.length - 1]];

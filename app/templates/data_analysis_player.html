@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chandra - {{ lesson.name }}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Socket.IO -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    
+    <!-- Math.js for advanced calculations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.0/math.min.js"></script>
+    
+    <style>
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 480px;
+            height: 360px;
+            margin: 0 auto;
+            border: 3px solid #007bff;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .gesture-display {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            min-height: 120px;
+        }
+        
+        .gesture-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .gesture-confidence {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .analysis-panel {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            min-height: 200px;
+        }
+        
+        .analysis-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #007bff;
+        }
+        
+        .analysis-type {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .analysis-status {
+            font-size: 0.9rem;
+            padding: 5px 10px;
+            border-radius: 20px;
+            background: #e9ecef;
+            color: #6c757d;
+        }
+        
+        .analysis-status.completed {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .analysis-content {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .stat-item {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+        }
+        
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+        
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            margin: 20px 0;
+        }
+        
+        .dataset-info {
+            background: #e8f4f8;
+            border: 1px solid #bee5eb;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .gesture-instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .gesture-mapping {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .gesture-card {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .gesture-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .gesture-card.completed {
+            background: #d4edda;
+            border-color: #c3e6cb;
+        }
+        
+        .gesture-icon {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+        
+        .progress-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .btn-control {
+            margin: 5px;
+            border-radius: 25px;
+            padding: 10px 20px;
+            font-weight: bold;
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <!-- Navigation -->
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary rounded mb-4">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="{{ url_for('main.index') }}">
+                    <i class="fas fa-hand-paper"></i> Chandra
+                </a>
+                <span class="navbar-text">
+                    Interactive Data Analysis
+                </span>
+            </div>
+        </nav>
+        
+        <!-- Main Content -->
+        <div class="row">
+            <!-- Video and Controls Column -->
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-video"></i> Camera Feed</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="video-container">
+                            <video id="video" autoplay muted playsinline></video>
+                            <canvas id="canvas"></canvas>
+                        </div>
+                        
+                        <div class="text-center mt-3">
+                            <button id="startBtn" class="btn btn-success btn-control">
+                                <i class="fas fa-play"></i> Start Detection
+                            </button>
+                            <button id="stopBtn" class="btn btn-danger btn-control" disabled>
+                                <i class="fas fa-stop"></i> Stop Detection
+                            </button>
+                            <button id="debugBtn" class="btn btn-info btn-control">
+                                <i class="fas fa-bug"></i> Toggle Debug
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Current Gesture Display -->
+                <div class="gesture-display">
+                    <div class="gesture-name" id="gestureName">No gesture detected</div>
+                    <div class="gesture-confidence" id="gestureConfidence">Hold your hand up to the camera</div>
+                </div>
+                
+                <!-- Progress Section -->
+                <div class="progress-section">
+                    <h6><i class="fas fa-chart-line"></i> Lesson Progress</h6>
+                    <div class="progress mb-3">
+                        <div class="progress-bar" id="lessonProgress" style="width: 0%"></div>
+                    </div>
+                    <div class="text-center">
+                        <small id="progressText">0% Complete</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Analysis Results Column -->
+            <div class="col-lg-8">
+                <!-- Dataset Information -->
+                <div class="dataset-info">
+                    <h6><i class="fas fa-database"></i> Dataset Information</h6>
+                    <div id="datasetInfo">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <div>Loading dataset...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Gesture Instructions -->
+                <div class="gesture-instructions">
+                    <h6><i class="fas fa-hand-point-up"></i> Gesture Commands</h6>
+                    <div class="gesture-mapping" id="gestureMapping">
+                        <!-- Gesture cards will be populated by JavaScript -->
+                    </div>
+                </div>
+                
+                <!-- Analysis Panels -->
+                <div id="analysisResults">
+                    <!-- Analysis panels will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Analysis Detail Modal -->
+        <div class="modal fade" id="analysisModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="analysisModalTitle">Analysis Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body" id="analysisModalBody">
+                        <!-- Analysis details will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Chandra Scripts -->
+    <script src="{{ url_for('static', filename='js/webcam-manager.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/gesture-engine.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/connection-manager.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/error-boundary.js') }}"></script>
+    
+    <!-- Data Analysis Specific Script -->
+    <script type="module" src="{{ url_for('static', filename='js/data-analysis-player.js') }}"></script>
+    
+    <script>
+        // Pass lesson data to JavaScript
+        const LESSON_DATA = {
+            id: "{{ lesson.id }}",
+            name: "{{ lesson.name }}",
+            script_id: "{{ script_id|default('') }}",
+            gesture_mappings: {% if lesson.gesture_mappings %}{{ lesson.gesture_mappings|tojson }}{% else %}{}{% endif %},
+            dataset_info: {% if lesson.dataset_info %}{{ lesson.dataset_info|tojson }}{% else %}{}{% endif %}
+        };
+        
+        // Initialize lesson on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Data Analysis Lesson loaded:', LESSON_DATA);
+            
+            // Check if script_id is available
+            if (!LESSON_DATA.script_id) {
+                document.getElementById('analysisResults').innerHTML = 
+                    '<div class="error-message">No script found for this lesson.</div>';
+                return;
+            }
+            
+            // Initialize the lesson player
+            if (window.DataAnalysisPlayer) {
+                window.DataAnalysisPlayer.init(LESSON_DATA);
+            }
+        });
+    </script>
+</body>
+</html> 

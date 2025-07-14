@@ -256,39 +256,68 @@ class LessonEnvironment:
     
     def _safe_import(self, module_name: str):
         """Safely import a module"""
-        if module_name not in SAFE_MODULES:
-            raise ImportError(f"Module '{module_name}' is not allowed")
+        base_module = module_name.split('.')[0]
         
-        try:
-            return importlib.import_module(module_name)
-        except ImportError as e:
-            self.api.log('warning', f"Could not import {module_name}: {e}")
-            return None
-        except Exception as e:
-            # For data science libraries, be more permissive
-            if module_name in ['numpy', 'pandas', 'matplotlib', 'scipy', 'sklearn', 'seaborn']:
-                try:
-                    # Try importing with a different approach
-                    if module_name == 'matplotlib':
-                        import matplotlib
-                        matplotlib.use('Agg')  # Use non-interactive backend
-                        return importlib.import_module(module_name)
-                    else:
-                        return importlib.import_module(module_name)
-                except Exception as e2:
-                    self.api.log('warning', f"Could not import {module_name}: {e2}")
-                    return None
-            else:
+        # Define allowed modules including standard library modules needed by scientific libraries
+        allowed_modules = [
+            '_io', 'os', 'sys', 'time', 'datetime', 'json', 'math', 'random', 
+            'collections', 'itertools', 'functools', 're', 'warnings', 'types',
+            'copy', 'pickle', 'struct', 'weakref', 'abc', 'io', 'builtins',
+            'threading', 'ctypes', 'textwrap', 'platform', 'sysconfig',
+            'importlib', 'importlib.util', 'importlib.machinery', 'importlib.abc',
+            'numbers', 'operator', 'multiprocessing', 'subprocess', 'locale',
+            'traceback', 'inspect', 'tempfile', 'shutil', 'contextlib'
+        ]
+        
+        # Check if module is allowed
+        if (module_name in SAFE_MODULES or base_module in SAFE_MODULES or 
+            module_name in allowed_modules or base_module in allowed_modules):
+            try:
+                return importlib.import_module(module_name)
+            except ImportError as e:
                 self.api.log('warning', f"Could not import {module_name}: {e}")
                 return None
+            except Exception as e:
+                # For data science libraries, be more permissive
+                if base_module in ['numpy', 'pandas', 'matplotlib', 'scipy', 'sklearn', 'seaborn']:
+                    try:
+                        # Try importing with a different approach
+                        if base_module == 'matplotlib':
+                            import matplotlib
+                            matplotlib.use('Agg')  # Use non-interactive backend
+                            return importlib.import_module(module_name)
+                        else:
+                            return importlib.import_module(module_name)
+                    except Exception as e2:
+                        self.api.log('warning', f"Could not import {module_name}: {e2}")
+                        return None
+                else:
+                    self.api.log('warning', f"Could not import {module_name}: {e}")
+                    return None
+        else:
+            raise ImportError(f"Module '{module_name}' is not allowed")
     
     def _handle_import(self, name, globals_dict, locals_dict, fromlist, level):
         """Custom import handler for safe modules"""
-        if name in SAFE_MODULES:
+        # Check if this is a submodule of an allowed module
+        base_module = name.split('.')[0]
+        
+        if name in SAFE_MODULES or base_module in SAFE_MODULES:
             return self._safe_import(name)
         else:
             # Allow standard library imports that are commonly needed
-            if name in ['_io', 'os', 'sys', 'time', 'datetime', 'json', 'math', 'random', 'collections', 'itertools', 'functools', 're']:
+            # Include modules that numpy and other scientific libraries need internally
+            allowed_modules = [
+                '_io', 'os', 'sys', 'time', 'datetime', 'json', 'math', 'random', 
+                'collections', 'itertools', 'functools', 're', 'warnings', 'types',
+                'copy', 'pickle', 'struct', 'weakref', 'abc', 'io', 'builtins',
+                'threading', 'ctypes', 'textwrap', 'platform', 'sysconfig',
+                'importlib', 'importlib.util', 'importlib.machinery', 'importlib.abc',
+                'numbers', 'operator', 'multiprocessing', 'subprocess', 'locale',
+                'traceback', 'inspect', 'tempfile', 'shutil', 'contextlib'
+            ]
+            
+            if name in allowed_modules or any(name.startswith(allowed + '.') for allowed in allowed_modules):
                 return self._safe_import(name)
             else:
                 raise ImportError(f"Import of '{name}' is not allowed")

@@ -36,12 +36,28 @@ def lesson_player(lesson_id):
     lesson = lessons.get(lesson_id)
     if not lesson:
         return render_template('lesson_player.html', error='Lesson not found', lesson_id=lesson_id)
+    
+    # Create lesson output object
     lesson_out = {
         'id': lesson['id'],
+        'name': lesson['name'],
         'title': lesson['name'],
         'description': lesson['description'],
         'difficulty': lesson.get('difficulty', 'beginner'),
     }
+    
+    # Add additional metadata for data analysis lesson
+    if lesson_id == 'data_analysis':
+        lesson_out.update({
+            'gesture_mappings': lesson.get('gesture_mappings', {}),
+            'dataset_info': lesson.get('dataset_info', {}),
+            'learning_objectives': lesson.get('learning_objectives', []),
+            'analysis_types': lesson.get('analysis_types', [])
+        })
+        # Use specialized template for data analysis
+        return render_template('data_analysis_player.html', lesson=lesson_out, script_id=lesson['id'])
+    
+    # Use default template for other lessons
     return render_template('lesson_player.html', lesson=lesson_out, script_id=lesson['id'])
 
 @main_bp.route('/dev-dashboard')
