@@ -145,7 +145,7 @@ class LessonPlayer {
 
             // Auto-start the script for this lesson if SCRIPT_ID is set
             if (typeof SCRIPT_ID !== 'undefined' && SCRIPT_ID) {
-                const startRes = await fetch(`/scripts/${SCRIPT_ID}/start`, { method: 'POST' });
+                const startRes = await fetch(`/scripts/lessons/${SCRIPT_ID}/start`, { method: 'POST' });
                 const startData = await startRes.json();
                 if (!startData.success) {
                     this.showError('Failed to start lesson script: ' + (startData.error || 'Unknown error'));

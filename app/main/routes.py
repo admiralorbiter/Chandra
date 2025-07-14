@@ -22,11 +22,6 @@ def index():
     """Main landing page"""
     return render_template('index.html')
 
-@main_bp.route('/lessons')
-def lessons():
-    """Lessons page"""
-    return render_template('lessons.html')
-
 @main_bp.route('/lesson/<lesson_id>')
 def lesson_detail(lesson_id):
     """Lesson detail page"""

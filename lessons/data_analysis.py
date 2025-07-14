@@ -9,6 +9,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from collections import defaultdict
 import json
+import time
 
 # Lesson configuration
 LESSON_NAME = "Data Analysis with Gestures"
@@ -55,15 +56,13 @@ def lesson_start():
     }
     
     # Update lesson state
-    state.update({
-        "lesson_name": LESSON_NAME,
-        "data_points": DATA_POINTS,
-        "analyses_performed": analyses_performed,
-        "current_analysis": current_analysis,
-        "analysis_results": analysis_results,
-        "basic_stats": basic_stats,
-        "start_time": time.time()
-    })
+    state.set("lesson_name", LESSON_NAME)
+    state.set("data_points", DATA_POINTS)
+    state.set("analyses_performed", analyses_performed)
+    state.set("current_analysis", current_analysis)
+    state.set("analysis_results", analysis_results)
+    state.set("basic_stats", basic_stats)
+    state.set("start_time", time.time())
     
     emit("lesson_started", {
         "lesson_name": LESSON_NAME,
@@ -104,11 +103,9 @@ def handle_gesture(gesture_data):
             "outliers": len(df[df['values'] > q3 + 1.5*iqr]) + len(df[df['values'] < q1 - 1.5*iqr])
         }
         
-        state.update({
-            "analyses_performed": analyses_performed,
-            "current_analysis": current_analysis,
-            "analysis_results": analysis_results
-        })
+        state.set("analyses_performed", analyses_performed)
+        state.set("current_analysis", current_analysis)
+        state.set("analysis_results", analysis_results)
         
         emit("analysis_complete", {
             "type": "descriptive",
@@ -140,11 +137,9 @@ def handle_gesture(gesture_data):
             "mean_correlation": float(corr_matrix.values[np.triu_indices_from(corr_matrix.values, k=1)].mean())
         }
         
-        state.update({
-            "analyses_performed": analyses_performed,
-            "current_analysis": current_analysis,
-            "analysis_results": analysis_results
-        })
+        state.set("analyses_performed", analyses_performed)
+        state.set("current_analysis", current_analysis)
+        state.set("analysis_results", analysis_results)
         
         emit("analysis_complete", {
             "type": "correlation",
@@ -179,11 +174,9 @@ def handle_gesture(gesture_data):
             "unique_values": int(df['values'].nunique())
         }
         
-        state.update({
-            "analyses_performed": analyses_performed,
-            "current_analysis": current_analysis,
-            "analysis_results": analysis_results
-        })
+        state.set("analyses_performed", analyses_performed)
+        state.set("current_analysis", current_analysis)
+        state.set("analysis_results", analysis_results)
         
         emit("analysis_complete", {
             "type": "distribution",
@@ -218,11 +211,9 @@ def handle_gesture(gesture_data):
             "last_quarter_mean": float(last_quarter)
         }
         
-        state.update({
-            "analyses_performed": analyses_performed,
-            "current_analysis": current_analysis,
-            "analysis_results": analysis_results
-        })
+        state.set("analyses_performed", analyses_performed)
+        state.set("current_analysis", current_analysis)
+        state.set("analysis_results", analysis_results)
         
         emit("analysis_complete", {
             "type": "trends",
@@ -273,11 +264,9 @@ def handle_gesture(gesture_data):
         
         analysis_results["summary"] = summary
         
-        state.update({
-            "analyses_performed": analyses_performed,
-            "current_analysis": current_analysis,
-            "analysis_results": analysis_results
-        })
+        state.set("analyses_performed", analyses_performed)
+        state.set("current_analysis", current_analysis)
+        state.set("analysis_results", analysis_results)
         
         emit("analysis_complete", {
             "type": "summary",
@@ -288,10 +277,8 @@ def handle_gesture(gesture_data):
     progress = min(100.0, analyses_performed * 25.0)  # 4 analyses = 100%
     
     # Update state
-    state.update({
-        "current_gesture": gesture,
-        "lesson_progress": progress
-    })
+    state.set("current_gesture", gesture)
+    state.set("lesson_progress", progress)
     
     # Emit gesture event
     emit("gesture_processed", {

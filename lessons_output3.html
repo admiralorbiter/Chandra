@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lessons - Chandra Education</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .lesson-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);
+            transition: transform 0.2s;
+        }
+        .lesson-card:hover {
+            transform: translateY(-4px) scale(1.01);
+        }
+        .lesson-difficulty {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="/">
+            <strong>Chandra</strong>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="/lessons">Lessons</a>
+                </li>
+                
+                
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="/dev-dashboard">
+                        <i class="fas fa-tachometer-alt"></i> Dev Dashboard
+                    </a>
+                </li>
+                
+                
+            </ul>
+            <ul class="navbar-nav">
+                
+                    <li class="nav-item">
+                        <a class="nav-link" href="/auth/login">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/auth/register">Register</a>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Alert Messages -->
+
+    
+ 
+
+    <div class="container py-5">
+        <h1 class="mb-4 text-center">Available Lessons</h1>
+        
+        <!-- FORCED DEBUG SECTION - ALWAYS VISIBLE -->
+        <div class="mb-4" style="background-color: #fff3cd; border: 2px solid #ffc107; padding: 20px; border-radius: 10px;">
+            <h3 style="color: #856404;">🔍 DEBUG INFORMATION</h3>
+            <p><strong>Debug info exists:</strong> True</p>
+            <p><strong>Debug info length:</strong> 21</p>
+            <p><strong>Lessons count:</strong> 2</p>
+            <p><strong>Errors count:</strong> None</p>
+            
+                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 10px;">
+                    <h5>Debug Details:</h5>
+                    <pre style="white-space: pre-wrap; font-size: 0.9rem; color: #495057;">Route started...
+Starting lesson discovery...
+Current working directory: C:\Users\admir\Github\Chandra
+Checking lessons directory: C:\Users\admir\Github\Chandra\lessons
+✓ Found lessons directory: C:\Users\admir\Github\Chandra\lessons
+Files in lessons directory: [&#39;counting_fingers.json&#39;, &#39;counting_fingers.py&#39;, &#39;data_analysis.json&#39;, &#39;data_analysis.py&#39;]
+Python files found: [&#39;counting_fingers.py&#39;, &#39;data_analysis.py&#39;]
+Getting lesson manager...
+Lesson manager created: &lt;class &#39;app.scripts.manager.LessonManager&#39;&gt;
+Manager lessons_dir: lessons
+Overriding manager lessons_dir from lessons to C:\Users\admir\Github\Chandra\lessons
+Rediscovering lessons...
+Rediscovery completed
+Getting lesson list from manager...
+Lessons from manager: 2 lessons
+  Lesson: counting_fingers - Counting Fingers
+  Lesson: data_analysis - Data Analysis
+Transformed lesson: {&#39;id&#39;: &#39;counting_fingers&#39;, &#39;title&#39;: &#39;Counting Fingers&#39;, &#39;description&#39;: &#39;Lesson counting_fingers&#39;, &#39;difficulty&#39;: &#39;beginner&#39;}
+Transformed lesson: {&#39;id&#39;: &#39;data_analysis&#39;, &#39;title&#39;: &#39;Data Analysis&#39;, &#39;description&#39;: &#39;Lesson data_analysis&#39;, &#39;difficulty&#39;: &#39;beginner&#39;}
+Final lessons_out: 2 lessons
+Recent errors imported: 0 errors
+</pre>
+                </div>
+            
+        </div>
+        
+        
+        <div class="row justify-content-center">
+            
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card lesson-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Counting Fingers</h5>
+                        <p class="lesson-difficulty mb-2">Difficulty: Beginner</p>
+                        <p class="card-text">Lesson counting_fingers</p>
+                        <a href="/lessons/counting_fingers" class="btn btn-primary">View Lesson</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card lesson-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Data Analysis</h5>
+                        <p class="lesson-difficulty mb-2">Difficulty: Beginner</p>
+                        <p class="card-text">Lesson data_analysis</p>
+                        <a href="/lessons/data_analysis" class="btn btn-primary">View Lesson</a>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white py-4 mt-5">
+        <div class="container text-center">
+            <p>&copy; 2024 Chandra Interactive Education Engine. All rights reserved.</p>
+        </div>
+    </footer>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 
