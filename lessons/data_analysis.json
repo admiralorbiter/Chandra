@@ -1,16 +1,19 @@
 {
   "id": "data_analysis",
-  "name": "Data Analysis",
-  "description": "Lesson data_analysis",
+  "name": "Data Analysis with Gestures",
+  "description": "Learn data science concepts through interactive gestures. Use different hand gestures to trigger statistical analyses, explore correlations, and generate insights from data.",
   "author": "system",
   "version": "1.0.0",
   "created": "2025-07-13",
   "tags": [
     "interactive",
-    "education"
+    "education",
+    "data_science",
+    "statistics",
+    "basic_python"
   ],
-  "difficulty": "beginner",
-  "duration": 10,
+  "difficulty": "intermediate",
+  "duration": 15,
   "requirements": [],
   "dependencies": []
 }

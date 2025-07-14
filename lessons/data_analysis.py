@@ -1,35 +1,71 @@
 """
 data_analysis - Data Analysis Lesson
-A lesson that uses Python data science tools for interactive learning
+A lesson that demonstrates data analysis concepts using basic Python
 """
 
-# Import data science libraries
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-from collections import defaultdict
 import json
 import time
+import random
+import math
+from collections import defaultdict
 
 # Lesson configuration
 LESSON_NAME = "Data Analysis with Gestures"
 DATA_POINTS = 100
 ANALYSIS_TYPES = ["descriptive", "correlation", "distribution", "trends"]
 
-# Generate sample data
-np.random.seed(42)  # For reproducible results
-data = np.random.normal(0, 1, DATA_POINTS)
-df = pd.DataFrame({
+# Generate sample data using basic Python
+random.seed(42)  # For reproducible results
+data = [random.gauss(0, 1) for _ in range(DATA_POINTS)]
+
+# Create simple data structure (like a basic DataFrame)
+dataset = {
     'values': data,
-    'squared': data ** 2,
-    'cubed': data ** 3,
-    'absolute': np.abs(data)
-})
+    'squared': [x ** 2 for x in data],
+    'cubed': [x ** 3 for x in data],
+    'absolute': [abs(x) for x in data]
+}
 
 # Lesson state
 analyses_performed = 0
 current_analysis = None
 analysis_results = {}
+
+def calculate_mean(values):
+    """Calculate mean of a list of values"""
+    return sum(values) / len(values)
+
+def calculate_std(values):
+    """Calculate standard deviation of a list of values"""
+    mean = calculate_mean(values)
+    variance = sum((x - mean) ** 2 for x in values) / len(values)
+    return math.sqrt(variance)
+
+def calculate_percentile(values, percentile):
+    """Calculate percentile of a list of values"""
+    sorted_values = sorted(values)
+    index = (percentile / 100) * (len(sorted_values) - 1)
+    if index.is_integer():
+        return sorted_values[int(index)]
+    else:
+        lower = sorted_values[int(index)]
+        upper = sorted_values[int(index) + 1]
+        return lower + (upper - lower) * (index - int(index))
+
+def calculate_correlation(x_values, y_values):
+    """Calculate correlation coefficient between two lists"""
+    n = len(x_values)
+    mean_x = calculate_mean(x_values)
+    mean_y = calculate_mean(y_values)
+    
+    numerator = sum((x_values[i] - mean_x) * (y_values[i] - mean_y) for i in range(n))
+    denominator_x = sum((x - mean_x) ** 2 for x in x_values)
+    denominator_y = sum((y - mean_y) ** 2 for y in y_values)
+    
+    if denominator_x == 0 or denominator_y == 0:
+        return 0
+    
+    return numerator / math.sqrt(denominator_x * denominator_y)
 
 @on_start
 def lesson_start():
@@ -45,14 +81,14 @@ def lesson_start():
     analysis_results = {}
     
     # Calculate basic statistics
+    values = dataset['values']
     basic_stats = {
-        "mean": float(df['values'].mean()),
-        "std": float(df['values'].std()),
-        "min": float(df['values'].min()),
-        "max": float(df['values'].max()),
-        "median": float(df['values'].median()),
-        "skewness": float(df['values'].skew()),
-        "kurtosis": float(df['values'].kurtosis())
+        "mean": calculate_mean(values),
+        "std": calculate_std(values),
+        "min": min(values),
+        "max": max(values),
+        "median": calculate_percentile(values, 50),
+        "count": len(values)
     }
     
     # Update lesson state
@@ -89,18 +125,24 @@ def handle_gesture(gesture_data):
         current_analysis = "descriptive"
         analyses_performed += 1
         
+        values = dataset['values']
+        
         # Calculate percentiles
         percentiles = [25, 50, 75, 90, 95]
-        percentile_values = [float(df['values'].quantile(p/100)) for p in percentiles]
+        percentile_values = [calculate_percentile(values, p) for p in percentiles]
         
         # Calculate quartiles and IQR
-        q1, q3 = float(df['values'].quantile(0.25)), float(df['values'].quantile(0.75))
+        q1 = calculate_percentile(values, 25)
+        q3 = calculate_percentile(values, 75)
         iqr = q3 - q1
+        
+        # Count outliers
+        outliers = sum(1 for x in values if x > q3 + 1.5*iqr or x < q1 - 1.5*iqr)
         
         analysis_results["descriptive"] = {
             "percentiles": dict(zip(percentiles, percentile_values)),
             "quartiles": {"Q1": q1, "Q3": q3, "IQR": iqr},
-            "outliers": len(df[df['values'] > q3 + 1.5*iqr]) + len(df[df['values'] < q1 - 1.5*iqr])
+            "outliers": outliers
         }
         
         state.set("analyses_performed", analyses_performed)
@@ -118,13 +160,14 @@ def handle_gesture(gesture_data):
         analyses_performed += 1
         
         # Calculate correlations between all columns
-        corr_matrix = df.corr()
         correlations = {}
+        columns = list(dataset.keys())
         
-        for col1 in df.columns:
-            for col2 in df.columns:
-                if col1 != col2:
-                    correlations[f"{col1}_vs_{col2}"] = float(corr_matrix.loc[col1, col2])
+        for i, col1 in enumerate(columns):
+            for j, col2 in enumerate(columns):
+                if i != j:
+                    corr = calculate_correlation(dataset[col1], dataset[col2])
+                    correlations[f"{col1}_vs_{col2}"] = corr
         
         # Find strongest correlations
         corr_pairs = [(k, v) for k, v in correlations.items()]
@@ -134,7 +177,7 @@ def handle_gesture(gesture_data):
         analysis_results["correlation"] = {
             "all_correlations": correlations,
             "strongest_correlations": strongest_correlations,
-            "mean_correlation": float(corr_matrix.values[np.triu_indices_from(corr_matrix.values, k=1)].mean())
+            "mean_correlation": calculate_mean(list(correlations.values()))
         }
         
         state.set("analyses_performed", analyses_performed)
@@ -151,27 +194,39 @@ def handle_gesture(gesture_data):
         current_analysis = "distribution"
         analyses_performed += 1
         
+        values = dataset['values']
+        
         # Generate histogram data
-        hist, bins = np.histogram(df['values'], bins=10)
-        bin_centers = (bins[:-1] + bins[1:]) / 2
+        bins = 10
+        min_val, max_val = min(values), max(values)
+        bin_width = (max_val - min_val) / bins
+        
+        histogram = [0] * bins
+        bin_edges = [min_val + i * bin_width for i in range(bins + 1)]
+        
+        for value in values:
+            bin_index = min(int((value - min_val) / bin_width), bins - 1)
+            histogram[bin_index] += 1
         
         # Calculate distribution statistics
-        skewness = float(df['values'].skew())
-        kurtosis = float(df['values'].kurtosis())
+        mean = calculate_mean(values)
+        std = calculate_std(values)
         
-        # Check for normality (simplified)
-        is_normal = abs(skewness) < 0.5 and abs(kurtosis) < 1.0
+        # Simple normality check (coefficient of variation)
+        cv = std / abs(mean) if mean != 0 else float('inf')
+        is_normal = cv < 1.0  # Simplified check
         
         analysis_results["distribution"] = {
             "histogram": {
-                "counts": hist.tolist(),
-                "bin_centers": bin_centers.tolist(),
-                "bins": bins.tolist()
+                "counts": histogram,
+                "bin_edges": bin_edges,
+                "bin_width": bin_width
             },
-            "skewness": skewness,
-            "kurtosis": kurtosis,
+            "mean": mean,
+            "std": std,
+            "cv": cv,
             "is_normal_like": is_normal,
-            "unique_values": int(df['values'].nunique())
+            "unique_values": len(set(values))
         }
         
         state.set("analyses_performed", analyses_performed)
@@ -188,27 +243,33 @@ def handle_gesture(gesture_data):
         current_analysis = "trends"
         analyses_performed += 1
         
+        values = dataset['values']
+        
         # Calculate moving averages
         window_sizes = [5, 10, 20]
         moving_averages = {}
         
         for window in window_sizes:
-            if len(df) >= window:
-                ma = df['values'].rolling(window=window).mean()
-                moving_averages[f"ma_{window}"] = ma.dropna().tolist()
+            if len(values) >= window:
+                ma = []
+                for i in range(window - 1, len(values)):
+                    window_values = values[i - window + 1:i + 1]
+                    ma.append(calculate_mean(window_values))
+                moving_averages[f"ma_{window}"] = ma
         
         # Calculate trend direction
-        first_quarter = df['values'].iloc[:len(df)//4].mean()
-        last_quarter = df['values'].iloc[-len(df)//4:].mean()
+        quarter_size = len(values) // 4
+        first_quarter = calculate_mean(values[:quarter_size])
+        last_quarter = calculate_mean(values[-quarter_size:])
         trend_direction = "increasing" if last_quarter > first_quarter else "decreasing"
         trend_strength = abs(last_quarter - first_quarter)
         
         analysis_results["trends"] = {
             "moving_averages": moving_averages,
             "trend_direction": trend_direction,
-            "trend_strength": float(trend_strength),
-            "first_quarter_mean": float(first_quarter),
-            "last_quarter_mean": float(last_quarter)
+            "trend_strength": trend_strength,
+            "first_quarter_mean": first_quarter,
+            "last_quarter_mean": last_quarter
         }
         
         state.set("analyses_performed", analyses_performed)
@@ -228,10 +289,9 @@ def handle_gesture(gesture_data):
         # Create comprehensive summary
         summary = {
             "data_overview": {
-                "total_points": len(df),
-                "columns": list(df.columns),
-                "memory_usage": df.memory_usage(deep=True).sum(),
-                "missing_values": df.isnull().sum().to_dict()
+                "total_points": len(dataset['values']),
+                "columns": list(dataset.keys()),
+                "missing_values": 0  # No missing values in our generated data
             },
             "statistical_summary": {
                 "descriptive": analysis_results.get("descriptive", {}),
@@ -243,6 +303,8 @@ def handle_gesture(gesture_data):
         }
         
         # Generate insights
+        basic_stats = state.get("basic_stats", {})
+        
         if "descriptive" in analysis_results:
             desc = analysis_results["descriptive"]
             if desc.get("outliers", 0) > 0:
@@ -262,6 +324,11 @@ def handle_gesture(gesture_data):
             else:
                 summary["insights"].append("Data shows non-normal distribution characteristics")
         
+        if "trends" in analysis_results:
+            trends = analysis_results["trends"]
+            direction = trends.get("trend_direction", "unknown")
+            summary["insights"].append(f"Overall trend is {direction}")
+        
         analysis_results["summary"] = summary
         
         state.set("analyses_performed", analyses_performed)
@@ -274,7 +341,7 @@ def handle_gesture(gesture_data):
         })
     
     # Update progress
-    progress = min(100.0, analyses_performed * 25.0)  # 4 analyses = 100%
+    progress = min(100.0, analyses_performed * 20.0)  # 5 analyses = 100%
     
     # Update state
     state.set("current_gesture", gesture)
