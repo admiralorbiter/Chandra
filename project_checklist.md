@@ -105,36 +105,11 @@
   - [x] `eductl export --zip`
   - [x] `eductl validate <script>` - Validate script syntax
   - [x] `eductl info <script>` - Show script information
-- [ ] **Swagger / OpenAPI Spec**
-  - [ ] Autogenerate with `flask-smorest`
-
----
-
-## 6 · Stretch & Future‑Proofing
-- [ ] **GraphQL Facade (Graphene)**
-- [ ] **Admin Dashboard (HTMX)**
-- [ ] **Plugin Loader Refactor**
-  - [ ] Dynamic discovery via entry‑points
-- [ ] **AI Tutor Module (Listens on internal bus)**
-
----
 
 ## Cross‑Cutting Concerns
 
 ### Security
 - [x] Sandbox import allow‑list
-- [ ] Enable CORS whitelist
-- [ ] HTTPS enforcement tips for prod
-
-### Performance
-- [ ] GZIP static JS (`Flask‑Compress`)
-- [ ] Object pooling for script sandboxes
-- [ ] Client FPS monitor & auto‑downgrade
-
-### Extensibility Hooks
-- [ ] Gesture Template Registry (JSON + images)
-- [ ] Message Bus (Pub/Sub) abstraction
-- [ ] DB URI config toggle (SQLite ↔ Postgres)
 
 ## ✅ Additional Chandra-Edu Checklist Features
 
@@ -160,23 +135,41 @@
   - [x] Handle JS runtime errors gracefully
   - [x] Auto-report frontend errors to Flask backend
 
-### 📁 Backup & Data Integrity
-- [ ] **Database Backup Strategy**
-  - [ ] Automated DB backups (SQLite/Postgres)
-- [ ] **Export/Import Utility**
-  - [ ] CLI/web admin tool for JSON export/import
-
-### ⚙️ Testing & CI/CD
-- [ ] **Automated Testing**
-  - [ ] Pytest (backend endpoints)
-  - [ ] Jest or similar (client-side JS/gesture logic)
-
 ### 📖 Documentation & Community Readiness
 - [x] **User & Developer Guides**
   - [x] Installation & deployment instructions
   - [x] Script-authoring examples/cookbook
   - [x] Comprehensive script engine documentation
+
+## 6 · Stretch & Future‑Proofing
+- [ ] **GraphQL Facade (Graphene)**
+- [ ] **Admin Dashboard (HTMX)**
+- [ ] **Plugin Loader Refactor**
+  - [ ] Dynamic discovery via entry‑points
+- [ ] **AI Tutor Module (Listens on internal bus)**
+- [ ] **Swagger / OpenAPI Spec**
+  - [ ] Autogenerate with `flask-smorest`
+- [ ] **Automated Testing**
+  - [ ] Pytest (backend endpoints)
+  - [ ] Jest or similar (client-side JS/gesture logic)
 - [ ] **Community Contribution Guidelines**
   - [ ] Proposing new gestures/scripts
   - [ ] GitHub Issue templates (bugs, features)
+  - [ ] Enable CORS whitelist
+- [ ] HTTPS enforcement tips for prod
 
+### Performance
+- [ ] GZIP static JS (`Flask‑Compress`)
+- [ ] Object pooling for script sandboxes
+- [ ] Client FPS monitor & auto‑downgrade
+
+### Extensibility Hooks
+- [ ] Gesture Template Registry (JSON + images)
+- [ ] Message Bus (Pub/Sub) abstraction
+- [ ] DB URI config toggle (SQLite ↔ Postgres)
+
+### 📁 Backup & Data Integrity
+- [ ] **Database Backup Strategy**
+  - [ ] Automated DB backups (SQLite/Postgres)
+- [ ] **Export/Import Utility**
+  - [ ] CLI/web admin tool for JSON export/import
