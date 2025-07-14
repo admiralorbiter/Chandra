@@ -28,6 +28,7 @@ numpy>=1.26.0
 
 # Script engine dependencies
 RestrictedPython>=7.0
+watchdog==3.0.0
 
 # Production dependencies
 gunicorn==21.2.0

@@ -127,26 +127,18 @@
 <body>
     {% include 'navbar.html' %}
     <div class="container-fluid">
-        <!-- Project Description -->
+        {% if error %}
+        <div class="alert alert-danger mt-4">{{ error }}</div>
+        {% else %}
+        <!-- Lesson Info -->
         <div class="row mt-4 mb-2">
-            <div class="col-12">
-                <div class="alert alert-info" style="max-width: 900px; margin: 0 auto;">
-                    <h4 class="mb-2">About This Demo</h4>
-                    <p>
-                        <strong>Chandra - Finger Counting Demo</strong> lets you count the total number of fingers you show to your webcam in real time. Each time you change the number of fingers held up, that number is added to the running total below.
-                    </p>
-                    <ol>
-                        <li>Click <b>Start Detection</b> and allow camera access if prompted.</li>
-                        <li>Hold up any number of fingers (0-5) to the camera.</li>
-                        <li>Each time you change the number of fingers, that number is added to the <b>Total Fingers Counted</b> below.</li>
-                        <li>Try different numbers to see your total increase!</li>
-                    </ol>
-                    <p>
-                        <strong>Tip:</strong> Good lighting and a clear background help the model detect your hand more accurately.
-                    </p>
-                </div>
+            <div class="col-12 text-center">
+                <h1 class="mb-2">{{ lesson.title }}</h1>
+                <p class="lesson-difficulty">Difficulty: {{ lesson.difficulty|capitalize }}</p>
+                <p>{{ lesson.description }}</p>
             </div>
         </div>
+        {% endif %}
         <!-- Connection Status -->
         <div class="connection-status">
             <span class="status-indicator status-disconnected" id="connectionIndicator"></span>
@@ -246,5 +238,21 @@
     <script src="{{ url_for('static', filename='js/webcam-manager.js') }}"></script>
     <script src="{{ url_for('static', filename='js/gesture-engine.js') }}"></script>
     <script src="{{ url_for('static', filename='js/lesson-player.js') }}"></script>
+    <script>
+// Pass script_id to JS
+const SCRIPT_ID = "{{ script_id|default('') }}";
+const LESSON_ID = "{{ lesson.id if lesson else '' }}";
+
+// Show error if script_id is missing
+if (!SCRIPT_ID) {
+    document.getElementById('mainContent').style.display = 'none';
+    document.getElementById('errorContainer').style.display = 'block';
+    document.getElementById('errorContainer').innerHTML = '<div class="alert alert-danger">No script found for this lesson.</div>';
+} else {
+    // Optionally: fetch script state, start script, etc.
+    // Example: fetch(`/scripts/${SCRIPT_ID}/start`, { method: 'POST' })
+    // You can add logic here to auto-start the script if needed.
+}
+</script>
 </body>
 </html> 

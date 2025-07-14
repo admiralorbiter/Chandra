@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chandra - Script Editor</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
+    
+    <!-- CodeMirror for syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+    
+    <!-- Socket.IO -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    
+    <style>
+        .editor-container {
+            height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .CodeMirror {
+            height: 100%;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+        }
+        
+        .script-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .script-item {
+            cursor: pointer;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            transition: all 0.2s;
+        }
+        
+        .script-item:hover {
+            background-color: #f8f9fa;
+            border-color: #007bff;
+        }
+        
+        .script-item.active {
+            background-color: #e3f2fd;
+            border-color: #2196f3;
+        }
+        
+        .validation-errors {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        .validation-warnings {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        .script-state {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        
+        .state-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        
+        .state-label {
+            font-weight: bold;
+            color: #495057;
+        }
+        
+        .state-value {
+            color: #6c757d;
+        }
+        
+        .template-selector {
+            background-color: #e9ecef;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        
+        .template-option {
+            cursor: pointer;
+            padding: 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            margin: 5px 0;
+            transition: all 0.2s;
+        }
+        
+        .template-option:hover {
+            background-color: #f8f9fa;
+            border-color: #007bff;
+        }
+        
+        .template-option.selected {
+            background-color: #e3f2fd;
+            border-color: #2196f3;
+        }
+    </style>
+</head>
+<body>
+    {% include 'navbar.html' %}
+    
+    <div class="container-fluid">
+        <div class="row mt-4">
+            <div class="col-12">
+                <h1 class="text-center mb-4">
+                    <i class="fas fa-code"></i>
+                    Chandra Script Editor
+                </h1>
+            </div>
+        </div>
+        
+        <div class="row">
+            <!-- Script List -->
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list"></i>
+                            Scripts
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="script-list" id="scriptList">
+                            <div class="text-center text-muted">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                Loading scripts...
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <button class="btn btn-primary btn-sm w-100" onclick="showCreateScript()">
+                            <i class="fas fa-plus"></i>
+                            Create New Script
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Script Editor -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-edit"></i>
+                            Script Editor
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="scriptId" class="form-label">Script ID:</label>
+                            <input type="text" class="form-control" id="scriptId" placeholder="Enter script ID">
+                        </div>
+                        
+                        <div class="editor-container">
+                            <textarea id="scriptEditor"></textarea>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <button class="btn btn-success me-2" onclick="saveScript()">
+                                <i class="fas fa-save"></i>
+                                Save Script
+                            </button>
+                            <button class="btn btn-info me-2" onclick="validateScript()">
+                                <i class="fas fa-check"></i>
+                                Validate
+                            </button>
+                            <button class="btn btn-warning me-2" onclick="startScript()">
+                                <i class="fas fa-play"></i>
+                                Start
+                            </button>
+                            <button class="btn btn-secondary" onclick="stopScript()">
+                                <i class="fas fa-stop"></i>
+                                Stop
+                            </button>
+                        </div>
+                        
+                        <!-- Validation Results -->
+                        <div id="validationResults" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Script State & Events -->
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-line"></i>
+                            Script State
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="scriptState">
+                            <div class="text-center text-muted">
+                                No script selected
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-history"></i>
+                            Recent Events
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="scriptEvents" style="max-height: 300px; overflow-y: auto;">
+                            <div class="text-center text-muted">
+                                No events yet
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Create Script Modal -->
+    <div class="modal fade" id="createScriptModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create New Script</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="newScriptId" class="form-label">Script ID:</label>
+                        <input type="text" class="form-control" id="newScriptId" placeholder="e.g., my_lesson">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Template:</label>
+                        <div class="template-selector" id="templateSelector">
+                            <!-- Templates will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="createScript()">Create Script</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- CodeMirror -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+    
+    <script>
+        // Global variables
+        let currentScriptId = null;
+        let editor = null;
+        let socket = null;
+        let selectedTemplate = 'basic';
+        
+        // Initialize the editor
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeEditor();
+            initializeWebSocket();
+            loadScripts();
+            loadTemplates();
+        });
+        
+        function initializeEditor() {
+            editor = CodeMirror.fromTextArea(document.getElementById('scriptEditor'), {
+                mode: 'python',
+                theme: 'monokai',
+                lineNumbers: true,
+                indentUnit: 4,
+                tabSize: 4,
+                indentWithTabs: false,
+                lineWrapping: true,
+                autoCloseBrackets: true,
+                matchBrackets: true,
+                foldGutter: true,
+                gutters: ['CodeMirror-linenumbers', 'CodeMirror-foldgutter']
+            });
+        }
+        
+        function initializeWebSocket() {
+            socket = io();
+            
+            socket.on('connect', () => {
+                console.log('Connected to server');
+            });
+            
+            socket.on('script_gesture_processed', (data) => {
+                console.log('Gesture processed:', data);
+            });
+            
+            socket.on('script_started', (data) => {
+                console.log('Script started:', data);
+                if (data.success) {
+                    updateScriptState();
+                }
+            });
+            
+            socket.on('script_stopped', (data) => {
+                console.log('Script stopped:', data);
+                if (data.success) {
+                    updateScriptState();
+                }
+            });
+            
+            socket.on('script_state', (data) => {
+                console.log('Script state:', data);
+                updateScriptStateDisplay(data.state);
+            });
+        }
+        
+        function loadScripts() {
+            fetch('/scripts/')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayScripts(data.scripts);
+                    } else {
+                        console.error('Failed to load scripts:', data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading scripts:', error);
+                });
+        }
+        
+        function displayScripts(scripts) {
+            const scriptList = document.getElementById('scriptList');
+            scriptList.innerHTML = '';
+            
+            if (scripts.length === 0) {
+                scriptList.innerHTML = '<div class="text-center text-muted">No scripts found</div>';
+                return;
+            }
+            
+            scripts.forEach(script => {
+                const scriptItem = document.createElement('div');
+                scriptItem.className = 'script-item';
+                scriptItem.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${script.name}</strong>
+                            <br>
+                            <small class="text-muted">${script.description}</small>
+                        </div>
+                        <div>
+                            <span class="badge bg-secondary">${script.version}</span>
+                        </div>
+                    </div>
+                `;
+                
+                scriptItem.addEventListener('click', () => {
+                    loadScript(script.id);
+                });
+                
+                scriptList.appendChild(scriptItem);
+            });
+        }
+        
+        function loadScript(scriptId) {
+            fetch(`/scripts/${scriptId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        currentScriptId = scriptId;
+                        document.getElementById('scriptId').value = scriptId;
+                        editor.setValue(data.script.content);
+                        
+                        // Update active script in list
+                        document.querySelectorAll('.script-item').forEach(item => {
+                            item.classList.remove('active');
+                        });
+                        
+                        // Find and highlight the active script
+                        document.querySelectorAll('.script-item').forEach(item => {
+                            if (item.textContent.includes(scriptId)) {
+                                item.classList.add('active');
+                            }
+                        });
+                        
+                        updateScriptState();
+                    } else {
+                        console.error('Failed to load script:', data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading script:', error);
+                });
+        }
+        
+        function saveScript() {
+            const scriptId = document.getElementById('scriptId').value;
+            const content = editor.getValue();
+            
+            if (!scriptId) {
+                alert('Please enter a script ID');
+                return;
+            }
+            
+            fetch(`/scripts/${scriptId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ content: content })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Script saved successfully!');
+                    loadScripts(); // Refresh the list
+                } else {
+                    alert('Failed to save script: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error saving script:', error);
+                alert('Error saving script');
+            });
+        }
+        
+        function validateScript() {
+            const content = editor.getValue();
+            
+            fetch('/scripts/validate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ content: content })
+            })
+            .then(response => response.json())
+            .then(data => {
+                displayValidationResults(data);
+            })
+            .catch(error => {
+                console.error('Error validating script:', error);
+            });
+        }
+        
+        function displayValidationResults(data) {
+            const resultsDiv = document.getElementById('validationResults');
+            resultsDiv.style.display = 'block';
+            
+            let html = '';
+            
+            if (data.valid) {
+                html += '<div class="alert alert-success">Script is valid!</div>';
+            }
+            
+            if (data.errors && data.errors.length > 0) {
+                html += '<div class="validation-errors">';
+                html += '<strong>Errors:</strong><ul>';
+                data.errors.forEach(error => {
+                    html += `<li>${error}</li>`;
+                });
+                html += '</ul></div>';
+            }
+            
+            if (data.warnings && data.warnings.length > 0) {
+                html += '<div class="validation-warnings">';
+                html += '<strong>Warnings:</strong><ul>';
+                data.warnings.forEach(warning => {
+                    html += `<li>${warning}</li>`;
+                });
+                html += '</ul></div>';
+            }
+            
+            resultsDiv.innerHTML = html;
+        }
+        
+        function startScript() {
+            if (!currentScriptId) {
+                alert('Please select a script first');
+                return;
+            }
+            
+            socket.emit('script_start', { script_id: currentScriptId });
+        }
+        
+        function stopScript() {
+            if (!currentScriptId) {
+                alert('Please select a script first');
+                return;
+            }
+            
+            socket.emit('script_stop', { script_id: currentScriptId });
+        }
+        
+        function updateScriptState() {
+            if (!currentScriptId) return;
+            
+            socket.emit('get_script_state', { script_id: currentScriptId });
+        }
+        
+        function updateScriptStateDisplay(state) {
+            const stateDiv = document.getElementById('scriptState');
+            
+            if (!state) {
+                stateDiv.innerHTML = '<div class="text-center text-muted">No state available</div>';
+                return;
+            }
+            
+            let html = '';
+            for (const [key, value] of Object.entries(state)) {
+                html += `
+                    <div class="state-item">
+                        <span class="state-label">${key}:</span>
+                        <span class="state-value">${JSON.stringify(value)}</span>
+                    </div>
+                `;
+            }
+            
+            stateDiv.innerHTML = html;
+        }
+        
+        function showCreateScript() {
+            const modal = new bootstrap.Modal(document.getElementById('createScriptModal'));
+            modal.show();
+        }
+        
+        function loadTemplates() {
+            fetch('/scripts/templates')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayTemplates(data.templates);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading templates:', error);
+                });
+        }
+        
+        function displayTemplates(templates) {
+            const selector = document.getElementById('templateSelector');
+            selector.innerHTML = '';
+            
+            templates.forEach(template => {
+                const option = document.createElement('div');
+                option.className = 'template-option';
+                option.innerHTML = `
+                    <div>
+                        <strong>${template.name}</strong>
+                        <br>
+                        <small class="text-muted">${template.description}</small>
+                    </div>
+                `;
+                
+                option.addEventListener('click', () => {
+                    document.querySelectorAll('.template-option').forEach(opt => {
+                        opt.classList.remove('selected');
+                    });
+                    option.classList.add('selected');
+                    selectedTemplate = template.id;
+                });
+                
+                selector.appendChild(option);
+            });
+            
+            // Select first template by default
+            if (templates.length > 0) {
+                selector.firstChild.classList.add('selected');
+                selectedTemplate = templates[0].id;
+            }
+        }
+        
+        function createScript() {
+            const scriptId = document.getElementById('newScriptId').value;
+            
+            if (!scriptId) {
+                alert('Please enter a script ID');
+                return;
+            }
+            
+            fetch('/scripts/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    script_id: scriptId,
+                    template: selectedTemplate
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Script created successfully!');
+                    bootstrap.Modal.getInstance(document.getElementById('createScriptModal')).hide();
+                    loadScripts();
+                    loadScript(scriptId);
+                } else {
+                    alert('Failed to create script: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error creating script:', error);
+                alert('Error creating script');
+            });
+        }
+    </script>
+</body>
+</html> 

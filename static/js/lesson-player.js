@@ -64,23 +64,28 @@ class LessonPlayer {
         try {
             // Show loading spinner
             this.showLoading();
-            
+
+            // Auto-start the script for this lesson if SCRIPT_ID is set
+            if (typeof SCRIPT_ID !== 'undefined' && SCRIPT_ID) {
+                const startRes = await fetch(`/scripts/${SCRIPT_ID}/start`, { method: 'POST' });
+                const startData = await startRes.json();
+                if (!startData.success) {
+                    this.showError('Failed to start lesson script: ' + (startData.error || 'Unknown error'));
+                    this.hideLoading();
+                    return;
+                }
+            }
             // Initialize WebSocket connection
             await this.initializeWebSocket();
-            
             // Initialize webcam
             await this.initializeWebcam();
-            
             // Initialize gesture engine
             await this.initializeGestureEngine();
-            
             // Set up event listeners
             this.setupEventListeners();
-            
             // Hide loading and show main content
             this.hideLoading();
             this.showMainContent();
-            
             console.log('Lesson player initialized successfully');
         } catch (error) {
             console.error('Failed to initialize lesson player:', error);
@@ -369,17 +374,10 @@ class LessonPlayer {
      * Show error message
      */
     showError(message) {
-        this.errorContainer.innerHTML = `
-            <div class="error-message">
-                <strong>Error:</strong> ${message}
-            </div>
-        `;
         this.errorContainer.style.display = 'block';
-        
-        // Auto-hide after 10 seconds
-        setTimeout(() => {
-            this.errorContainer.style.display = 'none';
-        }, 10000);
+        this.errorContainer.innerHTML = `<div class="alert alert-danger">${message}</div>`;
+        this.hideLoading();
+        if (this.mainContent) this.mainContent.style.display = 'none';
     }
 
     /**

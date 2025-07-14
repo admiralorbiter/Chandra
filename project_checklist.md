@@ -3,7 +3,7 @@
 > **How to use:** Check each item as you implement it.  
 > Nested boxes are subtasks—finish all before checking the parent item.
 
-## 0 · Project Scaffold
+## 0 · Project Scaffold
 - [x] **Initialize Repository**
   - [x] Create Git repo & `.gitignore`
   - [x] Add `README.md` with project vision
@@ -15,45 +15,67 @@
   - [x] Basic `requirements.txt` (`flask`, `flask-socketio`, `sqlalchemy`, etc.)
   - [x] Pre‑commit hooks (black, flake8)
 
-## 1 · Gesture MVP
-- [ ] **Client‑side Models**
-  - [ ] Integrate TensorFlow.js
-  - [ ] Load Handpose/Fingerpose templates
-  - [ ] Lazy‑cache models in IndexedDB
-- [ ] **Webcam & Permission Flow**
-  - [ ] HTTPS dev via `ngrok`
-  - [ ] Fallback message if camera denied
-- [ ] **WebSocket Echo Server**
-  - [ ] Add `flask_socketio` config (eventlet)
-  - [ ] Echo gesture events browser ↔ server
-- [ ] **Lesson Player Demo**
-  - [ ] Build Bootstrap “Counting Fingers” proof‑of‑concept
-  - [ ] Throttle event frequency to 10 Hz
+## 1 · Gesture MVP
+- [x] **Client‑side Models**
+  - [x] Integrate TensorFlow.js
+  - [x] Load Handpose/Fingerpose templates
+  - [x] Lazy‑cache models in IndexedDB
+- [x] **Webcam & Permission Flow**
+  - [x] HTTPS dev via `ngrok`
+  - [x] Fallback message if camera denied
+- [x] **WebSocket Echo Server**
+  - [x] Add `flask_socketio` config (eventlet)
+  - [x] Echo gesture events browser ↔ server
+- [x] **Lesson Player Demo**
+  - [x] Build Bootstrap "Counting Fingers" proof‑of‑concept
+  - [x] Throttle event frequency to 10 Hz
+
+## 2 · Script Engine
+- [x] **Python Sandbox**
+  - [x] Implement restricted namespace (`restrictedpython`)
+  - [x] Expose hooks: `on_start`, `on_gesture`, `on_tick`
+  - [x] Safe execution environment with limited Python functions
+  - [x] Security measures to prevent dangerous operations
+- [x] **Lesson Orchestrator**
+  - [x] Load metadata & enforce sequence
+  - [x] Timestamp & persist events
+  - [x] Script lifecycle management (load, start, stop, tick)
+  - [x] Event logging and state management
+- [x] **Hot Reload**
+  - [x] File‑watcher to reload `scripts/` modules without restart
+  - [x] Automatic script discovery and loading
+  - [x] Real-time script updates during development
+- [x] **SDK Docs**
+  - [x] Docstring examples & README section
+  - [x] Provide sample Python + JS stubs
+  - [x] Comprehensive documentation in `docs/script_engine.md`
+  - [x] API reference and usage examples
+- [x] **Port Sample Lessons**
+  - [x] Counting Fingers (`scripts/counting_fingers.py`)
+  - [x] Letter Tracing Wizard (`scripts/letter_tracing.py`)
+  - [x] Basic template for new lessons
+- [x] **Script Management Interface**
+  - [x] Web-based script editor with syntax highlighting
+  - [x] Real-time validation and error checking
+  - [x] Script creation with templates
+  - [x] Script state monitoring and event logging
+- [x] **CLI Tool (`eductl.py`)**
+  - [x] `eductl new-script <name>` - Create new scripts
+  - [x] `eductl run <lesson>` - Run scripts
+  - [x] `eductl export --zip` - Export scripts
+  - [x] `eductl validate <script>` - Validate script syntax
+  - [x] `eductl info <script>` - Show script information
+- [x] **API Endpoints**
+  - [x] RESTful API for script management
+  - [x] WebSocket integration for real-time communication
+  - [x] Script validation and state monitoring
+  - [x] Event streaming and logging
 
 ---
 
-## 2 · Script Engine
-- [ ] **Python Sandbox**
-  - [ ] Implement restricted namespace (`restrictedpython`)
-  - [ ] Expose hooks: `on_start`, `on_gesture`, `on_tick`
-- [ ] **Lesson Orchestrator**
-  - [ ] Load metadata & enforce sequence
-  - [ ] Timestamp & persist events
-- [ ] **Hot Reload**
-  - [ ] File‑watcher to reload `scripts/` modules without restart
-- [ ] **SDK Docs**
-  - [ ] Docstring examples & README section
-  - [ ] Provide sample Python + JS stubs
-- [ ] **Port Sample Lessons**
-  - [ ] Counting Fingers
-  - [ ] Letter Tracing Wizard
-  - [ ] Molecule Builder
-
----
-
-## 3 · Analytics & Progress Tracking
+## 3 · Analytics & Progress Tracking
 - [ ] **Database Tables**
-  - [ ] `progress` (user × lesson)
+  - [ ] `progress` (user × lesson)
   - [ ] `event_logs` (JSON, ts index)
 - [ ] **Collector Service**
   - [ ] Emit logs from orchestrator
@@ -64,7 +86,7 @@
 
 ---
 
-## 4 · User Accounts & Auth
+## 4 · User Accounts & Auth
 - [ ] **JWT Auth (Flask‑JWT‑Extended)**
   - [ ] Login, refresh, revoke
 - [ ] **Role Seed**
@@ -76,11 +98,13 @@
 
 ---
 
-## 5 · Packaging & CLI
-- [ ] **`eductl` Command‑Line Tool**
-  - [ ] `eductl new-script <name>`
-  - [ ] `eductl run <lesson>`
-  - [ ] `eductl export --zip`
+## 5 · Packaging & CLI
+- [x] **`eductl` Command‑Line Tool**
+  - [x] `eductl new-script <name>`
+  - [x] `eductl run <lesson>`
+  - [x] `eductl export --zip`
+  - [x] `eductl validate <script>` - Validate script syntax
+  - [x] `eductl info <script>` - Show script information
 - [ ] **Dockerization**
   - [ ] `Dockerfile` (python:3.12‑slim, gunicorn + eventlet)
   - [ ] `docker-compose.yml` with Postgres option
@@ -89,7 +113,7 @@
 
 ---
 
-## 6 · Stretch & Future‑Proofing
+## 6 · Stretch & Future‑Proofing
 - [ ] **GraphQL Facade (Graphene)**
 - [ ] **Postgres Migration Script**
 - [ ] **Admin Dashboard (React or HTMX)**
@@ -102,8 +126,8 @@
 ## Cross‑Cutting Concerns
 
 ### Security
+- [x] Sandbox import allow‑list
 - [ ] Enable CORS whitelist
-- [ ] Sandbox import allow‑list
 - [ ] HTTPS enforcement tips for prod
 
 ### Performance
@@ -119,9 +143,9 @@
 ## ✅ Additional Chandra-Edu Checklist Features
 
 ### 🔧 Developer Experience & Debugging
-- [ ] **Enhanced Logging & Debugging**
-  - [ ] Centralized logging (`loguru` or built-in logging)
-  - [ ] Real-time Flask logging UI
+- [x] **Enhanced Logging & Debugging**
+  - [x] Centralized logging (`loguru` or built-in logging)
+  - [x] Real-time Flask logging UI
 - [ ] **Local Dev Dashboard**
   - [ ] Server status, recent errors, connected WebSocket clients
 
@@ -177,9 +201,10 @@
 ---
 
 ### 📖 Documentation & Community Readiness
-- [ ] **User & Developer Guides**
-  - [ ] Installation & deployment instructions
-  - [ ] Script-authoring examples/cookbook
+- [x] **User & Developer Guides**
+  - [x] Installation & deployment instructions
+  - [x] Script-authoring examples/cookbook
+  - [x] Comprehensive script engine documentation
 - [ ] **Community Contribution Guidelines**
   - [ ] Proposing new gestures/scripts
   - [ ] GitHub Issue templates (bugs, features)

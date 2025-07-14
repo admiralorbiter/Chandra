@@ -61,4 +61,8 @@ def create_app(config_name=None):
     with app.app_context():
         db.create_all()
     
+    # Register WebSocket handlers for scripts
+    from app.scripts.routes import register_socketio_handlers
+    register_socketio_handlers(socketio)
+    
     return app 
