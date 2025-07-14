@@ -8,27 +8,49 @@
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ms-auto">
+            <ul class="navbar-nav me-auto">
                 <li class="nav-item">
                     <a class="nav-link" href="/lessons">Lessons</a>
                 </li>
+                {% if session.user_role in ['admin', 'author'] %}
                 <li class="nav-item">
                     <a class="nav-link" href="/scripts">Script Editor</a>
                 </li>
+                {% endif %}
                 <li class="nav-item">
                     <a class="nav-link" href="/lesson-player">Gesture Demo</a>
                 </li>
+                {% if session.user_role in ['admin', 'author'] %}
                 <li class="nav-item">
                     <a class="nav-link" href="/analytics/dashboard">
                         <i class="fas fa-chart-line"></i> Analytics
                     </a>
                 </li>
+                {% endif %}
+                {% if session.user_role == 'admin' %}
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-cog"></i> Admin
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="/auth/users">User Management</a></li>
+                        <li><a class="dropdown-item" href="/analytics/dashboard">System Analytics</a></li>
+                    </ul>
+                </li>
+                {% endif %}
+            </ul>
+            <ul class="navbar-nav">
                 {% if session.user_id %}
-                    <li class="nav-item">
-                        <span class="navbar-text text-light me-3">Welcome, {{ session.user_name }}!</span>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/auth/logout">Logout</a>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user"></i> {{ session.user_name }}
+                            <span class="badge bg-secondary ms-1">{{ session.user_role }}</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="/auth/profile">Profile</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/auth/logout">Logout</a></li>
+                        </ul>
                     </li>
                 {% else %}
                     <li class="nav-item">
@@ -41,4 +63,18 @@
             </ul>
         </div>
     </div>
-</nav> 
+</nav>
+
+<!-- Alert Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="container mt-3">
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %} 

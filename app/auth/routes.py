@@ -4,10 +4,15 @@ Authentication routes
 
 from datetime import datetime
 from flask import jsonify, request, render_template, redirect, url_for, flash, session
-from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import (
+    create_access_token, create_refresh_token, jwt_required, get_jwt_identity,
+    get_jwt
+)
 from app import db
 from app.models import User
+from app.models import RevokedToken
 from . import auth_bp
+from .decorators import admin_required, author_required, login_required
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -100,19 +105,91 @@ def refresh():
 @auth_bp.route('/logout')
 def logout():
     """User logout endpoint."""
+    # Revoke JWT tokens if they exist
+    try:
+        jwt_data = get_jwt()
+        jti = jwt_data.get("jti")
+        if jti:
+            revoked = RevokedToken(jti=jti)
+            db.session.add(revoked)
+            db.session.commit()
+    except Exception:
+        pass  # No JWT token to revoke
     # Clear session data
     session.clear()
     flash('You have been logged out successfully.', 'info')
     return redirect(url_for('main.index'))
 
-@auth_bp.route('/profile', methods=['GET'])
+@auth_bp.route('/revoke', methods=['POST'])
 @jwt_required()
+def revoke_token_endpoint():
+    """Revoke JWT token endpoint."""
+    jti = get_jwt()["jti"]
+    revoked = RevokedToken(jti=jti)
+    db.session.add(revoked)
+    db.session.commit()
+    return jsonify({"message": "Token revoked"}), 200
+
+@auth_bp.route('/profile', methods=['GET'])
+@login_required
 def profile():
-    """Get user profile endpoint."""
-    current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
+    """Get user profile page."""
+    if 'user_id' in session:
+        user_id = session['user_id']
+    else:
+        user_id = get_jwt_identity()
+    
+    user = User.query.get(user_id)
     
     if not user:
-        return jsonify({'error': 'User not found'}), 404
+        flash('User not found', 'error')
+        return redirect(url_for('main.index'))
     
+    return render_template('profile.html', user=user)
+
+@auth_bp.route('/users', methods=['GET'])
+@admin_required
+def list_users():
+    """List all users (admin only)."""
+    users = User.query.all()
+    return jsonify([user.to_dict() for user in users])
+
+@auth_bp.route('/users/<int:user_id>', methods=['PUT'])
+@admin_required
+def update_user(user_id):
+    """Update user role or status (admin only)."""
+    user = User.query.get_or_404(user_id)
+    data = request.get_json()
+    
+    if 'role' in data:
+        if data['role'] not in ['admin', 'author', 'student']:
+            return jsonify({'error': 'Invalid role'}), 400
+        user.role = data['role']
+    
+    if 'is_active' in data:
+        user.is_active = data['is_active']
+    
+    db.session.commit()
+    return jsonify(user.to_dict())
+
+@auth_bp.route('/users/<int:user_id>', methods=['DELETE'])
+@admin_required
+def delete_user(user_id):
+    """Delete user (admin only)."""
+    user = User.query.get_or_404(user_id)
+    db.session.delete(user)
+    db.session.commit()
+    return jsonify({'message': 'User deleted'}), 200
+
+@auth_bp.route('/users', methods=['GET'])
+@admin_required
+def user_management_page():
+    """User management page (admin only)."""
+    return render_template('user_management.html')
+
+@auth_bp.route('/users/<int:user_id>', methods=['GET'])
+@admin_required
+def get_user(user_id):
+    """Get specific user details (admin only)."""
+    user = User.query.get_or_404(user_id)
     return jsonify(user.to_dict()) 

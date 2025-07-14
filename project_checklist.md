@@ -87,14 +87,14 @@
 ---
 
 ## 4 · User Accounts & Auth
-- [ ] **JWT Auth (Flask‑JWT‑Extended)**
-  - [ ] Login, refresh, revoke
-- [ ] **Role Seed**
-  - [ ] `admin`, `author`, `student`
-  - [ ] Decorator for role‑protected routes
-- [ ] **Bootstrap UI**
-  - [ ] Login & Register pages
-  - [ ] Alert banners & nav bar state
+- [x] **JWT Auth (Flask‑JWT‑Extended)**
+  - [x] Login, refresh, revoke
+- [x] **Role Seed**
+  - [x] `admin`, `author`, `student`
+  - [x] Decorator for role‑protected routes
+- [x] **Bootstrap UI**
+  - [x] Login & Register pages
+  - [x] Alert banners & nav bar state
 
 ---
 

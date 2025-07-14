@@ -10,6 +10,7 @@ from flask_socketio import emit
 from . import scripts_bp
 from .manager import ScriptManager
 from app.analytics.collector import log_script_event, update_lesson_progress
+from app.auth.decorators import author_required
 
 # Global script manager instance
 script_manager = None
@@ -247,8 +248,9 @@ def get_script_events(script_id):
         }), 500
 
 @scripts_bp.route('/', methods=['POST'])
+@author_required
 def create_script():
-    """Create a new script."""
+    """Create a new script (authors and admins only)."""
     try:
         data = request.get_json()
         if not data or 'script_id' not in data:
@@ -282,8 +284,9 @@ def create_script():
         }), 500
 
 @scripts_bp.route('/<script_id>', methods=['DELETE'])
+@author_required
 def delete_script(script_id):
-    """Delete a script."""
+    """Delete a script (authors and admins only)."""
     try:
         manager = get_script_manager()
         manager.unload_script(script_id)

@@ -55,7 +55,13 @@ def create_app(config_name=None):
     app.register_blueprint(main_bp)
     
     # Import models to register them with SQLAlchemy
-    from app.models import User, Progress, EventLog
+    from app.models import User, Progress, EventLog, RevokedToken
+
+    # JWT token revocation (persistent denylist)
+    @jwt.token_in_blocklist_loader
+    def check_if_token_revoked(jwt_header, jwt_payload):
+        jti = jwt_payload["jti"]
+        return RevokedToken.query.filter_by(jti=jti).first() is not None
     
     # Create database tables
     with app.app_context():

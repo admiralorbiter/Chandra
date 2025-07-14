@@ -6,6 +6,7 @@ from flask import render_template, jsonify, request
 from . import main_bp
 from app.scripts.manager import ScriptManager
 from app.lessons.routes import get_lesson
+from app.auth.decorators import login_required, author_required
 
 @main_bp.route('/')
 def index():
@@ -41,8 +42,9 @@ def lesson_player(lesson_id):
     return render_template('lesson_player.html', lesson=lesson, script_id=script['id'])
 
 @main_bp.route('/scripts')
+@author_required
 def script_editor():
-    """Script editor page"""
+    """Script editor page (authors and admins only)"""
     return render_template('script_editor.html')
 
 @main_bp.route('/api/status')

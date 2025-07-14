@@ -10,6 +10,7 @@ from .charts import (
     generate_user_progress_chart,
     generate_dashboard_overview
 )
+from app.auth.decorators import author_required
 
 @analytics_bp.route('/progress/<int:user_id>', methods=['GET'])
 def get_user_progress(user_id):
@@ -220,6 +221,7 @@ def get_dashboard_overview_chart():
         }), 500
 
 @analytics_bp.route('/dashboard', methods=['GET'])
+@author_required
 def analytics_dashboard_page():
-    """Serve the analytics dashboard page."""
+    """Serve the analytics dashboard page (authors and admins only)."""
     return render_template('analytics_dashboard.html') 

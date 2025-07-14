@@ -49,3 +49,16 @@ class User(db.Model):
     
     def __repr__(self):
         return f'<User {self.email}>' 
+
+class RevokedToken(db.Model):
+    """Model for storing revoked JWT tokens (denylist)."""
+    __tablename__ = 'revoked_tokens'
+    id = db.Column(db.Integer, primary_key=True)
+    jti = db.Column(db.String(36), unique=True, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __init__(self, jti):
+        self.jti = jti
+
+    def __repr__(self):
+        return f'<RevokedToken {self.jti}>' 

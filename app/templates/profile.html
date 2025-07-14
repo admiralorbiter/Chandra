@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - Chandra Education</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .profile-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .profile-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 2.5rem;
+        }
+        .profile-body {
+            padding: 2rem;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid #eee;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #666;
+        }
+        .info-value {
+            color: #333;
+        }
+        .role-badge {
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    {% include 'navbar.html' %}
+    
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="profile-card">
+                    <div class="profile-header">
+                        <div class="profile-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <h2>{{ user.name }}</h2>
+                        <p class="mb-0">{{ user.email }}</p>
+                    </div>
+                    
+                    <div class="profile-body">
+                        <div class="info-row">
+                            <span class="info-label">Role</span>
+                            <span class="info-value">
+                                <span class="badge bg-{{ 'danger' if user.role == 'admin' else 'warning' if user.role == 'author' else 'primary' }} role-badge">
+                                    {{ user.role.title() }}
+                                </span>
+                            </span>
+                        </div>
+                        
+                        <div class="info-row">
+                            <span class="info-label">Account Status</span>
+                            <span class="info-value">
+                                <span class="badge bg-{{ 'success' if user.is_active else 'danger' }}">
+                                    {{ 'Active' if user.is_active else 'Inactive' }}
+                                </span>
+                            </span>
+                        </div>
+                        
+                        <div class="info-row">
+                            <span class="info-label">Member Since</span>
+                            <span class="info-value">{{ user.created_at.strftime('%B %d, %Y') }}</span>
+                        </div>
+                        
+                        <div class="info-row">
+                            <span class="info-label">Last Login</span>
+                            <span class="info-value">
+                                {{ user.last_login.strftime('%B %d, %Y at %I:%M %p') if user.last_login else 'Never' }}
+                            </span>
+                        </div>
+                        
+                        {% if user.role in ['admin', 'author'] %}
+                        <div class="info-row">
+                            <span class="info-label">Account Type</span>
+                            <span class="info-value">
+                                {% if user.role == 'admin' %}
+                                    <i class="fas fa-crown text-warning"></i> Administrator
+                                {% else %}
+                                    <i class="fas fa-pen text-info"></i> Content Creator
+                                {% endif %}
+                            </span>
+                        </div>
+                        {% endif %}
+                        
+                        <hr class="my-4">
+                        
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
+                                <i class="fas fa-key"></i> Change Password
+                            </button>
+                            <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-home"></i> Back to Home
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Change Password Modal -->
+    <div class="modal fade" id="changePasswordModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Change Password</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="changePasswordForm">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="currentPassword" class="form-label">Current Password</label>
+                            <input type="password" class="form-control" id="currentPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="newPassword" class="form-label">New Password</label>
+                            <input type="password" class="form-control" id="newPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirmNewPassword" class="form-label">Confirm New Password</label>
+                            <input type="password" class="form-control" id="confirmNewPassword" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Change Password</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('changePasswordForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+            
+            if (newPassword !== confirmNewPassword) {
+                alert('New passwords do not match!');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                alert('New password must be at least 6 characters long!');
+                return;
+            }
+            
+            // Here you would typically make an API call to change the password
+            // For now, we'll just show a success message
+            alert('Password change functionality would be implemented here.');
+            bootstrap.Modal.getInstance(document.getElementById('changePasswordModal')).hide();
+        });
+    </script>
+</body>
+</html> 
