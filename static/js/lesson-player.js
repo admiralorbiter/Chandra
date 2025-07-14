@@ -196,6 +196,11 @@ class LessonPlayer {
             this.showError(userMessage);
         });
         
+        // Set up ready callback
+        this.webcamManager.setOnReady(() => {
+            console.log('Webcam ready');
+        });
+        
         const success = await this.webcamManager.initialize(this.video);
         if (!success) {
             throw new Error('Failed to initialize webcam');

@@ -190,7 +190,7 @@ class WebcamManager {
     /**
      * Set ready callback
      */
-    onReady(callback) {
+    setOnReady(callback) {
         this.onReady = callback;
     }
 
@@ -204,7 +204,7 @@ class WebcamManager {
     /**
      * Set permission denied callback
      */
-    onPermissionDenied(callback) {
+    setOnPermissionDenied(callback) {
         this.onPermissionDenied = callback;
     }
 

@@ -106,7 +106,7 @@ class DataAnalysisPlayer {
     initializeManagers() {
         // Initialize webcam manager
         this.webcamManager = new WebcamManager();
-        this.webcamManager.onReady(() => {
+        this.webcamManager.setOnReady(() => {
             console.log('Webcam ready');
         });
         
